@@ -1,0 +1,6 @@
+cmake_minimum_required (VERSION 2.6)
+project (VWave)
+find_package(JNI REQUIRED)
+include_directories(${JAVA_INCLUDE_PATH})
+include_directories(${JAVA_INCLUDE_PATH2})
+add_executable (${PROJECT_NAME} main.cpp)
