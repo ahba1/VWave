@@ -4,7 +4,7 @@
 JNIEXPORT jint JNICALL 
 Agent_OnLoad(JavaVM *vm, char *options, void *reserved) {
     jvmtiEnv *vm_env;
-    vm->GetEnv((void**)&vm_env, JVMTI_VERSION_1_0);
+    vm->GetEnv(reinterpret_cast<void**>(&vm_env), JVMTI_VERSION_1_0);
     VWaveService::Init(vm_env);
 }
 

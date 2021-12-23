@@ -1,5 +1,6 @@
 #include <jvmti.h>
-#include <string>
+
+using namespace std;
 
 class VMService {
 
@@ -15,8 +16,8 @@ public:
         this->OnDestroyed();
     }
 
-    virtual string getServiceName();
+    virtual string GetServiceName();
     
     //release all the src held in this function
     virtual void OnDestroyed();
-}
+};
