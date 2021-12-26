@@ -1,9 +1,15 @@
+#include <set>
+#include <regex>
 #include "../vm_service_manager.hpp"
+#include "../base/vm_model.hpp"
 
 class VMMethodService: public VMService {
 
+private:
+    set<regex> filters;
+
 public:
-    VMMethodService(jvmtiEnv *vm_env): VMService(vm_env) {}
+    VMMethodService(jvmtiEnv *vm_env);
 
     string GetServiceName() {
         return "ThreadService";
@@ -11,9 +17,5 @@ public:
 
     void RegisterEventHandler();
 
-    void AddFilter();
-};
-
-class MethodFilter {
-    virtual bool filter();
+    void AddFilter(char *filter);
 };
