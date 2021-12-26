@@ -3,9 +3,10 @@
 #include <string>
 #include <string.h>
 #include <jvmti.h>
-#include "service/vm_service.hpp"
+#include "base/service/vm_service.hpp"
 #include "thread_service/vm_thread_service.cpp"
-#include "vm_error.hpp"
+#include "method_service/vm_method_service.hpp"
+#include "base/error/vm_error.hpp"
 
 typedef map<string, VMService*> VMSERVICE_MAP;
 

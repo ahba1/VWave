@@ -2,12 +2,9 @@
 
 using namespace std;
 
-typedef map<string, VMService*> VMSERVICE_MAP;
-
-VMSERVICE_MAP service_map;
-
 namespace VWaveService {
     void Init(jvmtiEnv *vm_env) {
+        service_map.insert(map<string, VMService*>::value_type("MethodService", new VMMethodService(vm_env)));
         service_map.insert(map<string, VMService*>::value_type("ThreadService", new VMThreadService(vm_env)));
     }
 

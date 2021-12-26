@@ -1,6 +1,8 @@
-#include "vm_service_manager.hpp"
+#include "../vm_service_manager.hpp"
 
-class VMMethodService: VMService {
+class VMMethodService: public VMService {
+
+public:
     VMMethodService(jvmtiEnv *vm_env): VMService(vm_env) {}
 
     string GetServiceName() {

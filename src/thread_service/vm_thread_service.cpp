@@ -1,4 +1,4 @@
-#include "vm_service_manager.hpp"
+#include "../vm_service_manager.hpp"
 
 class VMThreadService: public VMService {
 public:
