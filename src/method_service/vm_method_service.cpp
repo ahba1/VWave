@@ -14,6 +14,8 @@ namespace _VMMethodService {
     }
 }
 
+VMMethodService::VMMethodService(jvmtiEnv *vm_env): VMService(vm_env) {}
+
 void VMMethodService::RegisterEventHandler() {
     jvmtiEventCallbacks callbacks;
     memset(&callbacks, 0, sizeof(callbacks));

@@ -8,6 +8,10 @@ namespace VWaveService {
         service_map.insert(map<string, VMService*>::value_type("ThreadService", new VMThreadService(vm_env)));
     }
 
+    void DumpSnapShot() {
+
+    }
+
     void Destroyed() {
         map<string, VMService*>::iterator it;
         map<string, VMService*>::iterator it_end;
@@ -20,4 +24,10 @@ namespace VWaveService {
             it++;
         }
     }   
+
+    void CheckException(jvmtiError error) {
+        if (error != JVMTI_ERROR_NONE) {
+            throw VMError(&error);
+        }
+    }
 }

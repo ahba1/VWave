@@ -3,8 +3,9 @@
 #include <string>
 #include <string.h>
 #include <jvmti.h>
+
 #include "base/service/vm_service.hpp"
-#include "thread_service/vm_thread_service.cpp"
+#include "thread_service/vm_thread_service.hpp"
 #include "method_service/vm_method_service.hpp"
 #include "base/error/vm_error.hpp"
 
@@ -17,9 +18,7 @@ namespace VWaveService {
 
     void Destroyed();
 
-    void CheckException(jvmtiError error) {
-        if (error != JVMTI_ERROR_NONE) {
-            throw VMError(&error);
-        }
-    }
+    void DumpSnapShot();
+
+    void CheckException(jvmtiError error);
 }
