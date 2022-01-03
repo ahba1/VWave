@@ -2,7 +2,7 @@
 #include <regex>
 
 #include "../vm_service_manager.hpp"
-#include "../base/vm_model.hpp"
+#include "../base/include/vm_model.hpp"
 
 class VMMethodService: public VMService {
 

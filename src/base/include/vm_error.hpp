@@ -11,8 +11,6 @@ public:
         this->error = error;
     }
 
-    std::string GetReason();    
-
     int GetErrorCode();
 };
 

@@ -1,12 +1,13 @@
 #include <iostream>
 #include "vm_method_service.hpp"
+#include "../base/include/vm_error.hpp"
 
 namespace _VMMethodService {
     void JNICALL HandleMethodEntry(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, jmethodID methodID) {
         jvmtiError error;
         VMModel::Method *method;
         error = vm_env->Allocate(sizeof(VMModel::Method), reinterpret_cast<unsigned char**>(&method));
-        VWaveService::CheckException(error);
+        VMException::CheckException(error);
         VMModel::MapJMethod(vm_env, methodID, method);
 
         //method->Println();
@@ -23,9 +24,9 @@ void VMMethodService::RegisterEventHandler() {
 
     jvmtiError error;
     error = vm_env->SetEventCallbacks(&callbacks, static_cast<jint>(sizeof(callbacks)));
-    VWaveService::CheckException(error);
+    VMException::CheckException(error);
     error = vm_env->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_ENTRY, 0);
-    VWaveService::CheckException(error);
+    VMException::CheckException(error);
 }
 
 void VMMethodService::AddFilter(char *filter) {

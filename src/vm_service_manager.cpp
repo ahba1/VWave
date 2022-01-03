@@ -23,11 +23,5 @@ namespace VWaveService {
             delete it->second;
             it++;
         }
-    }   
-
-    void CheckException(jvmtiError error) {
-        if (error != JVMTI_ERROR_NONE) {
-            throw VMError(&error);
-        }
     }
 }

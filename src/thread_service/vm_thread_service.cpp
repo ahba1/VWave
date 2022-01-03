@@ -1,4 +1,5 @@
 #include "vm_thread_service.hpp"
+#include "../base/include/vm_error.hpp"
 
 VMThreadService::VMThreadService(jvmtiEnv *vm_env): VMService(vm_env){}
 
@@ -21,7 +22,7 @@ void VMThreadService::GetAllThread() {
     for (int i=0;i<size;i++) {
         VMModel::JVMThread *t;
         error = vm_env->Allocate(sizeof(VMModel::JVMThread), reinterpret_cast<unsigned char**>(&t));
-        VWaveService::CheckException(error);
+        VMException::CheckException(error);
         threads[i] = t;
     }
 }
