@@ -14,6 +14,8 @@ typedef map<string, VMService*> VMSERVICE_MAP;
 VMSERVICE_MAP service_map;
 
 namespace VWaveService {
+    std::streambuf *globalOuter = std::cout.rdbuf();
+
     void Init(jvmtiEnv *vm_env);
 
     void Destroyed();

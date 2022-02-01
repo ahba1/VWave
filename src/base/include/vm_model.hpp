@@ -49,7 +49,15 @@ namespace VMModel {
         AccessFlag access_flag;
         jboolean isInterface;
     };
+    void MapJClazz(jvmtiEnv *env, jclass klazz, Clazz *clazz);
 
+/****************************************method**************************************/
+
+    typedef char* (*MethodFormat)(char*, int, int, bool); //to-do implement this pt
+    /**
+     * @brief 
+     * A basical static info about a method
+     */
     class Method {
     public:
         Clazz *clazz;
@@ -64,10 +72,28 @@ namespace VMModel {
 
     void MapJMethod(jvmtiEnv *env, jmethodID methodID, Method *method);
     void DeallocateMethod(jvmtiEnv *env, Method *method);
-    void MapJClazz(jvmtiEnv *env, jclass klazz, Clazz *clazz);
+
+    //temp
+    void PrintMethod(Method* method, std::streambuf *target = std::cout.rdbuf());
+
+    /**
+     * @brief 
+     * A dynamic info about a method, which includes the runtime info about the method
+     * only the method is invoked and the thread is running, this info is right  
+     */
+    class DynamicMethod {
+    public:
+        Method *method;
+        JVMThread *thread;
+        bool isInTop; //this method is in the top of the stack or not, if not, may be current method is not top or the invoking thread is not running
+    };
+
+    void MapDynamicMethod(jvmtiEnv *env, jmethodID methodID, DynamicMethod *dMethod);
+    void DeallocateDynamicMethod(jvmtiEnv *env, DynamicMethod *dMethod);
+
 
 /*****************************************thread*************************************/
-    typedef char* (*Format)(char*, int, int, bool); //name, state, priority, isDaemon
+    typedef char* (*ThreadFormat)(char*, int, int, bool); //name, state, priority, isDaemon
     char* DefaultFormat(char* name, int state, int priority, bool isDaemon) {
         return NULL;
     }
@@ -79,7 +105,7 @@ namespace VMModel {
         jvmtiThreadInfo *info;
         ThreadState state;
 
-        void Println(Format *func, std::streambuf *target = std::cout.rdbuf());
+        void Println(ThreadFormat *func, std::streambuf *target = std::cout.rdbuf());
     };
 
     void MapJThread(jvmtiEnv *env, jthread _jthread, JVMThread *thread);

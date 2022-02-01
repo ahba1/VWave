@@ -10,8 +10,28 @@ namespace _VMMethodService {
         VMException::CheckException(error);
         VMModel::MapJMethod(vm_env, methodID, method);
 
-        //method->Println();
+        VMModel::PrintMethod(method);
         vm_env->Deallocate(reinterpret_cast<unsigned char*>(method));
+    }
+
+    void HandleMethodTrace(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, jmethodID methodID) {
+        jvmtiError error;
+        jvmtiFrameInfo *frame_buffer;
+        //VMModel::Method **methods;
+        VMModel::Method *method;
+        jint *count_ptr;
+        //to-do, get depth from global config
+        error = vm_env->GetStackTrace(thread, 0, 10, frame_buffer, count_ptr);
+        //error = vm_env->Allocate(sizeof(VMModel::Method*), reinterpret_cast<unsigned char**>(methods));
+        VMException::CheckException(error);
+        for (int i = 0;i < *count_ptr;i++) {
+            error = vm_env->Allocate(sizeof(VMModel::Method), reinterpret_cast<unsigned char**>(&method));
+            VMException::CheckException(error);
+            VMModel::MapJMethod(vm_env, methodID, method);
+
+            VMModel::PrintMethod(method);
+            vm_env->Deallocate(reinterpret_cast<unsigned char*>(method));
+        }
     }
 }
 
@@ -29,6 +49,10 @@ void VMMethodService::RegisterEventHandler() {
     VMException::CheckException(error);
 }
 
-void VMMethodService::AddFilter(char *filter) {
-    filters.insert(regex(filter));
+void VMMethodService::AddFilter(char *filter, VMMethodHandler handler = DefVMMethodHandler) {
+    filters[regex(filter)] = handler;
+}
+
+void VMMethodService::GetMethodTrace(char *methodName) {
+    AddFilter(methodName, &_VMMethodService::HandleMethodTrace);
 }

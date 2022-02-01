@@ -1,4 +1,4 @@
-#include <set>
+#include <map>
 #include <regex>
 
 #include "../vm_service_manager.hpp"
@@ -7,7 +7,7 @@
 class VMMethodService: public VMService {
 
 private:
-    set<regex> filters;
+    map<regex, VMMethodHandler> filters;
 
 public:
     VMMethodService(jvmtiEnv *vm_env);
@@ -18,5 +18,12 @@ public:
 
     void RegisterEventHandler();
 
-    void AddFilter(char *filter);
+    void AddFilter(char *filter, VMMethodHandler handler);
+
+    void GetMethodTrace(char *methodName);
 };
+
+typedef void(*VMMethodHandler)(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, jmethodID methodID);
+
+
+void DefVMMethodHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, jmethodID methodID) {}

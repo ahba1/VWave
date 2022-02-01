@@ -41,7 +41,35 @@ namespace VMModel {
         env->Deallocate(reinterpret_cast<unsigned char*>(method));
     }
 
-    void JVMThread::Println(Format *func, std::streambuf *target = std::cout.rdbuf()) {
+    void MapDynamicMethod(jvmtiEnv *env, jmethodID methodID, DynamicMethod *dMethod) {
+        jvmtiError error;
+        VMModel::Method *method;
+        error = env->Allocate(sizeof(VMModel::Method), reinterpret_cast<unsigned char**>(&method));
+        VMException::CheckException(error);
+        MapJMethod(env, methodID, method);
+        dMethod->method = method;
+        //to-do get the method stack trace info
+    }
+
+    void DeallocateDynamicMethod(jvmtiEnv *env, DynamicMethod *dMethod) {
+
+    }
+
+    void PrintMethod(Method* method, std::streambuf *target = std::cout.rdbuf()) {
+        std::cout.rdbuf(target);
+        if (method->generic) {
+            std::cout<<method->generic<<" ";
+        }
+        if (method->name)
+        {
+            std::cout<<method->name<<std::endl;
+        }
+    
+        std::cout.flush();
+    }
+    
+
+    void JVMThread::Println(ThreadFormat *func, std::streambuf *target = std::cout.rdbuf()) {
             char *output = (*func)(info->name, state, info->priority, info->is_daemon);
             std::cout.rdbuf(target);
             std::cout<<output<<std::endl;
