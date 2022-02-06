@@ -1,8 +1,11 @@
 #include <map>
 #include <regex>
 
-#include "../vm_service_manager.hpp"
-#include "../base/include/vm_model.hpp"
+#include "../base/vm_service.hpp"
+
+using namespace std;
+
+typedef void(*VMMethodHandler)(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, jmethodID methodID);
 
 class VMMethodService: public VMService {
 
@@ -12,8 +15,8 @@ private:
 public:
     VMMethodService(jvmtiEnv *vm_env);
 
-    string GetServiceName() {
-        return "ThreadService";
+    char* GetServiceName() {
+        return "MethodService";
     }
 
     void RegisterEventHandler();
@@ -23,7 +26,3 @@ public:
     void GetMethodTrace(char *methodName);
 };
 
-typedef void(*VMMethodHandler)(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, jmethodID methodID);
-
-
-void DefVMMethodHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, jmethodID methodID) {}

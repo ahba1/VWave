@@ -1,6 +1,9 @@
-#pragma once
+#ifndef VM_MODEL_H
+#define VM_MODEL_H
+
 #include <iostream>
 #include <jvmti.h>
+#include "vwave_core.hpp"
 
 namespace VMModel {
 /***********************************Access Flag(method class)***************************************/
@@ -72,42 +75,5 @@ namespace VMModel {
 
     void MapJMethod(jvmtiEnv *env, jmethodID methodID, Method *method);
     void DeallocateMethod(jvmtiEnv *env, Method *method);
-
-    //temp
-    void PrintMethod(Method* method, std::streambuf *target = std::cout.rdbuf());
-
-    /**
-     * @brief 
-     * A dynamic info about a method, which includes the runtime info about the method
-     * only the method is invoked and the thread is running, this info is right  
-     */
-    class DynamicMethod {
-    public:
-        Method *method;
-        JVMThread *thread;
-        bool isInTop; //this method is in the top of the stack or not, if not, may be current method is not top or the invoking thread is not running
-    };
-
-    void MapDynamicMethod(jvmtiEnv *env, jmethodID methodID, DynamicMethod *dMethod);
-    void DeallocateDynamicMethod(jvmtiEnv *env, DynamicMethod *dMethod);
-
-
-/*****************************************thread*************************************/
-    typedef char* (*ThreadFormat)(char*, int, int, bool); //name, state, priority, isDaemon
-    char* DefaultFormat(char* name, int state, int priority, bool isDaemon) {
-        return NULL;
-    }
-    //using JVMThread to differ from Thread
-    class JVMThread {
-    
-    public:
-        jthread _thread;
-        jvmtiThreadInfo *info;
-        ThreadState state;
-
-        void Println(ThreadFormat *func, std::streambuf *target = std::cout.rdbuf());
-    };
-
-    void MapJThread(jvmtiEnv *env, jthread _jthread, JVMThread *thread);
-    void DeallocateThread(jvmtiEnv *env, JVMThread *thread);
 }
+#endif

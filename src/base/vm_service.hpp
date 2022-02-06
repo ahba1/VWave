@@ -1,6 +1,5 @@
+#pragma once
 #include <jvmti.h>
-
-using namespace std;
 
 class VMService {
 
@@ -13,11 +12,11 @@ public:
     }
 
     ~VMService() {
-        this->OnDestroyed();
+        //this->OnDestroyed();
     }
 
-    virtual string GetServiceName();
-    
+    virtual char* GetServiceName() = 0;
+        
     //release all the src held in this function
-    virtual void OnDestroyed();
+    //virtual void OnDestroyed();
 };
