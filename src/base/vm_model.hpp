@@ -56,24 +56,24 @@ namespace VMModel {
 
 /****************************************method**************************************/
 
-    typedef char* (*MethodFormat)(char*, int, int, bool); //to-do implement this pt
-    /**
-     * @brief 
-     * A basical static info about a method
-     */
-    class Method {
-    public:
-        Clazz *clazz;
-        jmethodID _methodID;
-        char *name;        
-        char *generic;
-        char *signature;
-        AccessFlag access_flag;
-        int param_len;
-        jboolean isNative;
-    };
+    // typedef char* (*MethodFormat)(char*, int, int, bool); //to-do implement this pt
+    // /**
+    //  * @brief 
+    //  * A basical static info about a method
+    //  */
+    // class Method {
+    // public:
+    //     Clazz *clazz;
+    //     jmethodID _methodID;
+    //     char *name;        
+    //     char *generic;
+    //     char *signature;
+    //     AccessFlag access_flag;
+    //     int param_len;
+    //     jboolean isNative;
+    // };
 
-    void MapJMethod(jvmtiEnv *env, jmethodID methodID, Method *method);
-    void DeallocateMethod(jvmtiEnv *env, Method *method);
+    // void MapJMethod(jvmtiEnv *env, jmethodID methodID, Method *method);
+    // void DeallocateMethod(jvmtiEnv *env, Method *method);
 }
 #endif

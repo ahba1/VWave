@@ -1,28 +1,45 @@
-#include <map>
-#include <regex>
-
 #include "../base/vm_service.hpp"
+#include "../base/vm_model.hpp"
+
+#include "../global.hpp"
 
 using namespace std;
+using namespace Global;
 
-typedef void(*VMMethodHandler)(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, jmethodID methodID);
+namespace VMModel
+{
 
-class VMMethodService: public VMService {
+    class Method;
 
+    void MapJMethod(jvmtiEnv *env, jmethodID methodID, Method *method);
+
+    /**
+     * @brief
+     * format: [access] [static or not] [final or not] [generic] synchronized/native [return-type] [name]([param-type...])
+     */
+    void PrintJMethod(Method *method);
+}
+
+typedef void (*VMMethodHandler)(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method);
+
+class VMMethodService : public VMService
+{
 private:
-    map<regex, VMMethodHandler> filters;
+    int _is_started = 0;
+
+    void DispatchCMD(char *key, char *value=NULL);
+
+    void RegisterEventHandler();
+
 
 public:
     VMMethodService(jvmtiEnv *vm_env);
 
-    char* GetServiceName() {
-        return "MethodService";
-    }
+    void ParseOptions(char **options, int options_size) override;
 
-    void RegisterEventHandler();
+    char *GetServiceName() override;
 
     void AddFilter(char *filter, VMMethodHandler handler);
 
     void GetMethodTrace(char *methodName);
 };
-
