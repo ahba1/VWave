@@ -17,8 +17,8 @@ namespace VMModel
         char *name;
         char *signature;
         char *generic;
-        jint *access_flag;
-        jboolean *is_native;
+        jint access_flag;
+        jboolean is_native;
     };
 
     void MapJMethod(jvmtiEnv *env, jmethodID methodID, Method *method)
@@ -27,9 +27,10 @@ namespace VMModel
         method->_methodID = methodID;
         error = env->GetMethodName(methodID, &method->name, &method->signature, &method->generic);
         Exception::HandleException(error);
-        // error = env->GetMethodModifiers(methodID, method->access_flag);
+        error = env->GetMethodModifiers(methodID, &method->access_flag);
         Exception::HandleException(error);
-        // error = env->IsMethodNative(methodID, method->is_native);
+        error = env->IsMethodNative(methodID, &method->is_native);
+        Exception::HandleException(error);
     }
 
     /**
@@ -44,7 +45,7 @@ namespace VMModel
 
 namespace _VMMethodService
 {
-    map<char *, VMMethodHandler> filters;
+    map<char*, VMMethodHandler> filters;
 
     void JNICALL HandleMethodEntry(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, jmethodID methodID)
     {
@@ -105,9 +106,9 @@ void VMMethodService::DispatchCMD(char *key, char *value)
  *      method: method name(support regex)
  * @param options
  */
-void VMMethodService::ParseOptions(char **options, int options_size)
+void VMMethodService::ParseOptions(char **options, int option_size)
 {
-    for (int i = 0; i < options_size; i++)
+    for (int i = 0; i < option_size; i++)
     {
         int kv_size = 0;
         char **cmd_kv = split(options[i], _spilt_kv_token, _max_kv_size, &kv_size);
@@ -136,7 +137,7 @@ void VMMethodService::RegisterEventHandler()
     Exception::HandleException(error);
 }
 
-void VMMethodService::AddFilter(char *filter, VMMethodHandler handler = _VMMethodService::DefaultVMMethodHandler)
+void VMMethodService::AddFilter(char *filter, _VMMethodService::VMMethodHandler handler = _VMMethodService::DefaultVMMethodHandler)
 {
     _VMMethodService::filters[filter] = handler;
 }

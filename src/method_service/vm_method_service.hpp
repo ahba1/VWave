@@ -20,26 +20,28 @@ namespace VMModel
     void PrintJMethod(Method *method);
 }
 
-typedef void (*VMMethodHandler)(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method);
+namespace _VMMethodService
+{
+    typedef void (*VMMethodHandler)(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method);
+}
 
 class VMMethodService : public VMService
 {
 private:
     int _is_started = 0;
 
-    void DispatchCMD(char *key, char *value=NULL);
+    void DispatchCMD(char *key, char *value = NULL);
 
     void RegisterEventHandler();
-
 
 public:
     VMMethodService(jvmtiEnv *vm_env);
 
-    void ParseOptions(char **options, int options_size) override;
+    void ParseOptions(char **options, int option_size) override;
 
     char *GetServiceName() override;
 
-    void AddFilter(char *filter, VMMethodHandler handler);
+    void AddFilter(char *filter,_VMMethodService::VMMethodHandler handler);
 
     void GetMethodTrace(char *methodName);
 };
