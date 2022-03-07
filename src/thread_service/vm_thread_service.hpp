@@ -16,7 +16,7 @@ namespace VMModel
 
     void MapThreadState(int state, char **state_str);
 
-    void MapLocalInfo(VMThread *vm_thread);
+    void MapLocalInfo(jvmtiEnv *env, VMThread *vm_thread);
 
     // when there is a call of MapVMThread, there is must a call of DellocateThread
     void DellocateThread(jvmtiEnv *env, VMThread *vm_thread);
@@ -29,6 +29,8 @@ namespace _VMThreadService
     typedef void* (*VWaveThreadFunc)(void *args);
 
     void CreateJNIThread(jthread *thread, VWaveThreadFunc func, void *args);
+
+    void OnThreadStateChange(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread thread);
 }
 
 class VMThreadService : public VMService

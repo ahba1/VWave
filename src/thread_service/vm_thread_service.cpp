@@ -30,7 +30,6 @@ namespace VMModel
         error = env->GetThreadState(thread, &vm_thread->_thread_state);
         Exception::HandleException(error);
         MapThreadState(vm_thread->_thread_state, &vm_thread->thread_state);
-        Exception::HandleException(error);
         // get vm thread info, info includes its name, priority, is_damon, thread group, classloader
         MapLocalInfo(env, vm_thread);
     }
