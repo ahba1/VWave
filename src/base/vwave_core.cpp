@@ -11,4 +11,15 @@ namespace Exception {
             throw error;
         }
     }
+
+    void HandleExternalException(int error) {
+        switch (error)
+        {
+        case 0:
+            break;        
+        default:
+            std::cout<<error<<"\n";
+            throw error;
+        }
+    }
 }

@@ -13,6 +13,7 @@
 using namespace std;
 
 namespace Global {
+    inline JavaVM *global_java_vm;
     inline jvmtiEnv *global_vm_env;
 
     inline map<char*, VMService*> services;

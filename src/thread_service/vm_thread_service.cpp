@@ -1,6 +1,8 @@
 #include <iostream>
 #include <stdio.h>
 #include <map>
+#include <pthread.h>
+#include <unistd.h> //attention, this header file is only used on Linux, in the future, this will adapt to Windows and Solaris
 
 #include <shared_func.h>
 
@@ -105,22 +107,31 @@ namespace VMModel
     }
 }
 
-namespace _VMThreadService {
-    map<char*, ThreadWatcher> watchers;
+namespace _VMThreadService
+{
+    map<char *, ThreadWatcher> watchers;
 
-    void JNICALL OnThreadStart(jvmtiEnv *jvmti_env, JNIEnv* jni_env, jthread thread) {
+    int monitor_thread_state = 0;
+
+    const int QUERY_THREAD_SLEEP_TIME = 1; // TimeUnit: second
+
+    void JNICALL OnThreadStart(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread thread)
+    {
         OnThreadStateChange(jvmti_env, jni_env, thread);
     }
 
-    void JNICALL OnThreadEnd(jvmtiEnv *jvmti_env, JNIEnv* jni_env, jthread thread) {
+    void JNICALL OnThreadEnd(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread thread)
+    {
         OnThreadStateChange(jvmti_env, jni_env, thread);
     }
 
-    void DefaultThreadWatcher(jvmtiEnv *vm_env, JNIEnv *jni, VMModel::VMThread *vm_thread) {
+    void DefaultThreadWatcher(jvmtiEnv *vm_env, JNIEnv *jni, VMModel::VMThread *vm_thread)
+    {
         VMModel::PrintVMThread(vm_thread);
     }
 
-    void OnThreadStateChange(jvmtiEnv *jvmti_env, JNIEnv* jni_env, jthread thread) {
+    void OnThreadStateChange(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread thread)
+    {
         jvmtiError error;
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(jvmti_env, thread, &vm_thread);
@@ -129,9 +140,62 @@ namespace _VMThreadService {
             watchers[vm_thread.thread_name](jvmti_env, jni_env, &vm_thread);
         }
     }
+
+    void *QueryThreadState(void *arg)
+    {
+        jint error;
+        jvmtiError jerror;
+        map<char *, int> states;
+        for (map<char *, ThreadWatcher>::iterator it = watchers.begin(); it != watchers.end(); it++)
+        {
+            states[it->first] = -1;
+        }
+        error = Global::global_java_vm->AttachCurrentThread(reinterpret_cast<void **>(&Global::global_vm_env), NULL);
+        Exception::HandleException(error);
+        _VMThreadService::monitor_thread_state = 1;
+        jint thread_count;
+        jthread *threads_ptr;
+        while (monitor_thread_state)
+        {
+            // sleep and check other thread state;
+            jerror = Global::global_vm_env->GetAllThreads(&thread_count, &threads_ptr);
+            if (error != JVMTI_ERROR_NONE)
+            {
+                break;
+            }
+            try
+            {
+                for (int i = 0; i < thread_count; i++)
+                {
+                    VMModel::VMThread vm_thread;
+                    VMModel::MapVMThread(Global::global_vm_env, threads_ptr[i], &vm_thread);
+                    if (states.find(vm_thread.thread_name) != states.end() && states[vm_thread.thread_name] != vm_thread._thread_state)
+                    {
+                        OnThreadStateChange(Global::global_vm_env, NULL, threads_ptr[i]);
+                        states[vm_thread.thread_name] = vm_thread._thread_state;
+                    }
+                }
+            }
+            catch (jvmtiError e)
+            {
+                break;
+            }
+            sleep(QUERY_THREAD_SLEEP_TIME);
+        }
+        error = Global::global_java_vm->DetachCurrentThread();
+        Exception::HandleException(error);
+        Exception::HandleException(jerror);
+    }
+
+    void CreateJNIThread(pthread_t thread_t, VWaveThreadFunc func, void *args)
+    {
+        int error = pthread_create(&thread_t, NULL, func, args);
+        Exception::HandleException(error);
+    }
 }
 
-VMThreadService::VMThreadService(jvmtiEnv *env) : VMService(env) {
+VMThreadService::VMThreadService(jvmtiEnv *env) : VMService(env)
+{
     jvmtiCapabilities caps;
     memset(&caps, 0, sizeof(caps));
     caps.can_signal_thread = 1;
@@ -139,11 +203,12 @@ VMThreadService::VMThreadService(jvmtiEnv *env) : VMService(env) {
     Exception::HandleException(e);
 }
 
-void VMThreadService::DispatchCMD(char *key, char *value) {
-
+void VMThreadService::DispatchCMD(char *key, char *value)
+{
 }
 
-void VMThreadService::ParseOptions(char **options, int option_size) {
+void VMThreadService::ParseOptions(char **options, int option_size)
+{
     for (int i = 0; i < option_size; i++)
     {
         int kv_size = 0;
@@ -156,11 +221,13 @@ void VMThreadService::ParseOptions(char **options, int option_size) {
     }
 }
 
-char *VMThreadService::GetServiceName() {
+char *VMThreadService::GetServiceName()
+{
     return "ThreadService";
 }
 
-void VMThreadService::GetCurrentThreadInfo() {
+void VMThreadService::GetCurrentThreadInfo()
+{
     jvmtiError error;
     jthread *_thread;
     VMModel::VMThread vm_thread;
@@ -171,7 +238,8 @@ void VMThreadService::GetCurrentThreadInfo() {
     VMModel::DellocateThread(vm_env, &vm_thread);
 }
 
-void VMThreadService::MonitorThread(char *thread_name, _VMThreadService::ThreadWatcher watcher = _VMThreadService::DefaultThreadWatcher) {
+void VMThreadService::MonitorThread(char *thread_name, _VMThreadService::ThreadWatcher watcher = _VMThreadService::DefaultThreadWatcher)
+{
     jvmtiEventCallbacks callbacks;
     memset(&callbacks, 0, sizeof(callbacks));
     callbacks.ThreadStart = &_VMThreadService::OnThreadStart;
@@ -184,4 +252,20 @@ void VMThreadService::MonitorThread(char *thread_name, _VMThreadService::ThreadW
     Exception::HandleException(error);
     error = vm_env->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_THREAD_END, 0);
     Exception::HandleException(error);
+}
+
+void VMThreadService::StartMonitorThread()
+{
+    pthread_t thread_t;
+    _VMThreadService::CreateJNIThread(thread_t, _VMThreadService::QueryThreadState, NULL);
+}
+
+void VMThreadService::EndMoitorThread()
+{
+    _VMThreadService::monitor_thread_state = 0;
+}
+
+VMThreadService::~VMThreadService()
+{
+    EndMoitorThread();
 }

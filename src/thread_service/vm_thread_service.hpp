@@ -25,6 +25,10 @@ namespace VMModel
 namespace _VMThreadService
 {
     typedef void (*ThreadWatcher)(jvmtiEnv *vm_env, JNIEnv *jni, VMModel::VMThread *vm_thread);
+
+    typedef void* (*VWaveThreadFunc)(void *args);
+
+    void CreateJNIThread(jthread *thread, VWaveThreadFunc func, void *args);
 }
 
 class VMThreadService : public VMService
@@ -35,8 +39,14 @@ private:
 
     void DispatchCMD(char *key, char *value = NULL);
 
+    void StartMonitorThread();
+
+    void EndMoitorThread();
+
 public:
     VMThreadService(jvmtiEnv *vm_env);
+
+    ~VMThreadService();
 
     void ParseOptions(char **options, int option_size) override;
 

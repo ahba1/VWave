@@ -20,6 +20,7 @@ namespace Bootstrap
 
     void Init(JavaVM *vm, char *options, void *reserved)
     {
+        global_java_vm = vm;
         vm->GetEnv(reinterpret_cast<void **>(&global_vm_env), JVMTI_VERSION_1_0);
         PreParseOptions(options);
         std::cout << "load successfully..." << std::endl;

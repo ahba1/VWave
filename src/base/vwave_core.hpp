@@ -6,5 +6,7 @@
 
 namespace Exception {
     extern void HandleException(jvmtiError error);
+
+    extern void HandleException(int error);
 }
 #endif
