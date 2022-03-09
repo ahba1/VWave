@@ -7,6 +7,7 @@
 #include "global.hpp"
 #include "base/vm_service.hpp"
 #include "method_service/vm_method_service.hpp"
+#include "thread_service/vm_thread_service.hpp"
 
 namespace Bootstrap
 {
@@ -70,6 +71,22 @@ namespace Bootstrap
             VMMethodService *method_service = new VMMethodService(global_vm_env);
             services[service_name] = method_service;
             method_service->ParseOptions(options, options_size);
+            return;
+        }
+        if (!strcmp(service_name, "thread"))
+        {
+            VMThreadService *thread_service = new VMThreadService(global_vm_env);
+            services[service_name] = thread_service;
+            thread_service->ParseOptions(options, options_size);
+            return;
+        }
+        if (!strcmp(service_name, "thread_method"))
+        {
+            VMThreadService *thread_service = new VMThreadService(global_vm_env);
+            services["thread"] = thread_service;
+            VMMethodService *method_service = new VMMethodService(global_vm_env);
+            services["method"] = method_service;
+            thread_service->ParseOptions(options, options_size);
             return;
         }
         std::cout << "unsupport parameters: ";

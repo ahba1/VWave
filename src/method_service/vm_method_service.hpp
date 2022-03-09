@@ -32,7 +32,9 @@ private:
 
     void DispatchCMD(char *key, char *value = NULL);
 
-    void RegisterEventHandler();
+    void RegisterNormalEventHandler();
+
+    void RegisterMethodTraceHandler();
 
 public:
     VMMethodService(jvmtiEnv *vm_env);
@@ -41,7 +43,11 @@ public:
 
     char *GetServiceName() override;
 
-    void AddFilter(char *filter,_VMMethodService::VMMethodHandler handler);
+    void AddEntryFilter(char *filter,_VMMethodService::VMMethodHandler handler);
 
-    void GetMethodTrace(char *methodName);
+    void AddExitFilter(char *filter,_VMMethodService::VMMethodHandler handler);
+    
+    void GetMethodTrace(char *file);
+
+    ~VMMethodService();
 };

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <stdio.h>
 #include <map>
 #include <regex>
@@ -45,7 +46,9 @@ namespace VMModel
 
 namespace _VMMethodService
 {
-    map<char*, VMMethodHandler> filters;
+    map<char*, VMMethodHandler> entry_filters;
+    map<char*, VMMethodHandler> exit_filters;
+    ofstream fout;
 
     void JNICALL HandleMethodEntry(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, jmethodID methodID)
     {
@@ -56,8 +59,8 @@ namespace _VMMethodService
         VMModel::MapJMethod(vm_env, methodID, method);
         error = vm_env->GetMethodName(methodID, &method->name, &method->signature, &method->generic);
         map<char *, VMMethodHandler>::iterator it;
-        it = filters.begin();
-        while (it != filters.end())
+        it = entry_filters.begin();
+        while (it != entry_filters.end())
         {
             if (regex_search(method->name, regex(it->first)))
             {
@@ -68,9 +71,48 @@ namespace _VMMethodService
         vm_env->Deallocate(reinterpret_cast<unsigned char *>(method));
     }
 
+    void JNICALL HandleMethodExit(
+        jvmtiEnv *jvmti_env,
+        JNIEnv* jni_env,
+        jthread thread,
+        jmethodID methodID,
+        jboolean was_popped_by_exception,
+        jvalue return_value)
+    {
+        jvmtiError error;
+        VMModel::Method *method;
+        error = jvmti_env->Allocate(sizeof(VMModel::Method), reinterpret_cast<unsigned char **>(&method));
+        Exception::HandleException(error);
+        VMModel::MapJMethod(jvmti_env, methodID, method);
+        error = jvmti_env->GetMethodName(methodID, &method->name, &method->signature, &method->generic);
+        map<char *, VMMethodHandler>::iterator it;
+        it = exit_filters.begin();
+        while (it != exit_filters.end())
+        {
+            if (regex_search(method->name, regex(it->first)))
+            {
+                it->second(jvmti_env, jni_env, thread, method);
+            }
+            it++;
+        }
+        jvmti_env->Deallocate(reinterpret_cast<unsigned char *>(method));
+    }
+
     void DefaultVMMethodHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
     {
         VMModel::PrintJMethod(method);
+    }
+
+    //todo according to thread to create responding file
+    //todo create another file to record thread switch
+    void RecordVMMethodEntryHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
+    {
+        fout << "entry " << method->name << endl;
+    }
+
+    void RecordVMMethodExitHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
+    {
+        fout << "exit " << method->name <<endl;
     }
 }
 
@@ -89,14 +131,27 @@ void VMMethodService::DispatchCMD(char *key, char *value)
     {
         if (value)
         {
-            this->AddFilter(value, _VMMethodService::DefaultVMMethodHandler);
+            this->AddEntryFilter(value, _VMMethodService::DefaultVMMethodHandler);
             if (!_is_started) {
-                RegisterEventHandler();
+                RegisterNormalEventHandler();
                 _is_started = !_is_started;
             }
         }
         return;
     }
+    if (!strcmp(key, "reord"))
+    {
+        if (value)
+        {
+            this->GetMethodTrace(value);
+        }
+        if (!_is_started) {
+            RegisterMethodTraceHandler();
+            _is_started = !_is_started;
+        }
+        return;
+    }
+    
 }
 
 /**
@@ -104,6 +159,7 @@ void VMMethodService::DispatchCMD(char *key, char *value)
  *
  * format: x=x&x=x
  *      method: method name(support regex)
+ *      record: record to which file
  * @param options
  */
 void VMMethodService::ParseOptions(char **options, int option_size)
@@ -125,7 +181,7 @@ char *VMMethodService::GetServiceName()
     return "MethodService";
 }
 
-void VMMethodService::RegisterEventHandler()
+void VMMethodService::RegisterNormalEventHandler()
 {
     jvmtiEventCallbacks callbacks;
     memset(&callbacks, 0, sizeof(callbacks));
@@ -137,11 +193,39 @@ void VMMethodService::RegisterEventHandler()
     Exception::HandleException(error);
 }
 
-void VMMethodService::AddFilter(char *filter, _VMMethodService::VMMethodHandler handler = _VMMethodService::DefaultVMMethodHandler)
+void VMMethodService::RegisterMethodTraceHandler()
 {
-    _VMMethodService::filters[filter] = handler;
+    jvmtiEventCallbacks callbacks;
+    memset(&callbacks, 0, sizeof(callbacks));
+    callbacks.MethodEntry = &_VMMethodService::HandleMethodEntry;
+    callbacks.MethodExit = &_VMMethodService::HandleMethodExit;
+    jvmtiError error;
+    error = vm_env->SetEventCallbacks(&callbacks, static_cast<jint>(sizeof(callbacks)));
+    Exception::HandleException(error);
+    error = vm_env->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_ENTRY, 0);
+    Exception::HandleException(error);
+    error = vm_env->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_EXIT, 0);
+    Exception::HandleException(error);
 }
 
-void VMMethodService::GetMethodTrace(char *methodName)
+void VMMethodService::AddEntryFilter(char *filter, _VMMethodService::VMMethodHandler handler = _VMMethodService::DefaultVMMethodHandler)
 {
+    _VMMethodService::entry_filters[filter] = handler;
+}
+
+void VMMethodService::AddExitFilter(char *filter, _VMMethodService::VMMethodHandler handler = _VMMethodService::DefaultVMMethodHandler)
+{
+    _VMMethodService::exit_filters[filter] = handler;
+}
+
+void VMMethodService::GetMethodTrace(char *file)
+{
+    _VMMethodService::fout.open(file);
+    AddEntryFilter("*", _VMMethodService::RecordVMMethodEntryHandler);
+    AddExitFilter("*", _VMMethodService::RecordVMMethodExitHandler);
+}
+
+VMMethodService::~VMMethodService()
+{
+    _VMMethodService::fout.close();
 }
