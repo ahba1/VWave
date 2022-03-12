@@ -6,6 +6,29 @@
 #include "vwave_core.hpp"
 
 namespace VMModel {
+    class VMThread
+    {
+    public:
+        jthread _thread;
+        jint _thread_state;
+        char *thread_state;
+        jvmtiThreadInfo *_info;
+        char *thread_name;
+        jint thread_priority;
+        jboolean is_daemon;
+        // temprorily not add group info and class loader info
+    };
+
+    void MapVMThread(jvmtiEnv *env, jthread thread, VMThread *vm_thread);
+
+    void PrintVMThread(VMThread *vm_thread);
+
+    void MapThreadState(int state, char **state_str);
+
+    void MapLocalInfo(jvmtiEnv *env, VMThread *vm_thread);
+
+    // when there is a call of MapVMThread, there is must a call of DellocateThread
+    void DellocateThread(jvmtiEnv *env, VMThread *vm_thread);
 /***********************************Access Flag(method class)***************************************/
 
     typedef jint AccessFlag;

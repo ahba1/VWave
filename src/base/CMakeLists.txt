@@ -1,8 +1,0 @@
-cmake_minimum_required (VERSION 2.6)
-find_package(JNI REQUIRED)
-include_directories(${JAVA_INCLUDE_PATH})
-include_directories(${JAVA_INCLUDE_PATH2})
-aux_source_directory(. Base_Src)
-message("VWave_Base: ${Base_Src}")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR/archive})
-add_library(base STATIC ${Base_Src})

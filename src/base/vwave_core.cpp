@@ -7,6 +7,7 @@ namespace Exception {
         case JVMTI_ERROR_NONE:
             break;        
         default:
+            std::cout<<"internal exception happened\n";
             std::cout<<error<<"\n";
             throw error;
         }
@@ -18,6 +19,7 @@ namespace Exception {
         case 0:
             break;        
         default:
+            std::cout<<"external exception happened\n";
             std::cout<<error<<"\n";
             throw error;
         }

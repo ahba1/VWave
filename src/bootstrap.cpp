@@ -66,6 +66,8 @@ namespace Bootstrap
 
     void LoadService(char *service_name, char **options, int options_size)
     {
+        std::cout << service_name << std::endl;
+        std::cout << *options << std::endl;
         if (!strcmp(service_name, "method"))
         {
             VMMethodService *method_service = new VMMethodService(global_vm_env);

@@ -48,7 +48,8 @@ namespace _VMMethodService
 {
     map<char*, VMMethodHandler> entry_filters;
     map<char*, VMMethodHandler> exit_filters;
-    ofstream fout;
+    map<char*, ofstream*> recording_ofs;
+    char *recording_folder;
 
     void JNICALL HandleMethodEntry(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, jmethodID methodID)
     {
@@ -61,7 +62,10 @@ namespace _VMMethodService
         map<char *, VMMethodHandler>::iterator it;
         it = entry_filters.begin();
         while (it != entry_filters.end())
-        {
+        {   
+            cout<<"enter loop"<<endl;
+            cout<<method->name<<endl;
+            cout<<it->first<<endl;
             if (regex_search(method->name, regex(it->first)))
             {
                 it->second(vm_env, jni, thread, method);
@@ -107,12 +111,25 @@ namespace _VMMethodService
     //todo create another file to record thread switch
     void RecordVMMethodEntryHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
     {
-        fout << "entry " << method->name << endl;
+        VMModel::VMThread vm_thread;
+        VMModel::MapVMThread(vm_env, thread, &vm_thread);
+        if (recording_ofs.find(vm_thread.thread_name) == recording_ofs.end())
+        {
+            cout << "create file\n";
+            ofstream *out = new ofstream(strcat(strcat(recording_folder, vm_thread.thread_name), ".txt"));
+            recording_ofs[vm_thread.thread_name] = out;
+        }
+        cout << "output\n";
+        (*recording_ofs[vm_thread.thread_name]) << "entry " << method->name << endl;
+        cout << "output end\n";
+        VMModel::DellocateThread(vm_env, &vm_thread);
     }
 
     void RecordVMMethodExitHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
     {
-        fout << "exit " << method->name <<endl;
+        VMModel::VMThread vm_thread;
+        VMModel::MapVMThread(vm_env, thread, &vm_thread);
+        (*recording_ofs[vm_thread.thread_name]) << "exit " << method->name << endl;
     }
 }
 
@@ -121,6 +138,7 @@ VMMethodService::VMMethodService(jvmtiEnv *vm_env) : VMService(vm_env)
     jvmtiCapabilities caps;
     memset(&caps, 0, sizeof(caps));
     caps.can_generate_method_entry_events = 1;
+    caps.can_generate_method_exit_events = 1;
     jvmtiError e = vm_env->AddCapabilities(&caps);
     Exception::HandleException(e);
 }
@@ -139,7 +157,7 @@ void VMMethodService::DispatchCMD(char *key, char *value)
         }
         return;
     }
-    if (!strcmp(key, "reord"))
+    if (!strcmp(key, "record"))
     {
         if (value)
         {
@@ -220,12 +238,17 @@ void VMMethodService::AddExitFilter(char *filter, _VMMethodService::VMMethodHand
 
 void VMMethodService::GetMethodTrace(char *file)
 {
-    _VMMethodService::fout.open(file);
-    AddEntryFilter("*", _VMMethodService::RecordVMMethodEntryHandler);
-    AddExitFilter("*", _VMMethodService::RecordVMMethodExitHandler);
+    _VMMethodService::recording_folder = file;
+    AddEntryFilter(".*", _VMMethodService::RecordVMMethodEntryHandler);
+    AddExitFilter(".*", _VMMethodService::RecordVMMethodExitHandler);
 }
 
 VMMethodService::~VMMethodService()
 {
-    _VMMethodService::fout.close();
+    map<char*, ofstream*>::iterator it = _VMMethodService::recording_ofs.begin();
+    while(it != _VMMethodService::recording_ofs.end()) {
+        it->second->close();
+        delete it->second;
+        it++;
+    }
 }
