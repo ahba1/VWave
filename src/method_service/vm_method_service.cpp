@@ -63,9 +63,6 @@ namespace _VMMethodService
         it = entry_filters.begin();
         while (it != entry_filters.end())
         {   
-            cout<<"enter loop"<<endl;
-            cout<<method->name<<endl;
-            cout<<it->first<<endl;
             if (regex_search(method->name, regex(it->first)))
             {
                 it->second(vm_env, jni, thread, method);
@@ -113,15 +110,18 @@ namespace _VMMethodService
     {
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
-        if (recording_ofs.find(vm_thread.thread_name) == recording_ofs.end())
+        char *file = strcat(strcat(recording_folder, vm_thread.thread_name), ".txt");
+        if (strcmp(vm_thread.thread_name, "main"))
         {
-            cout << "create file\n";
-            ofstream *out = new ofstream(strcat(strcat(recording_folder, vm_thread.thread_name), ".txt"));
-            recording_ofs[vm_thread.thread_name] = out;
+            cout << vm_thread.thread_name <<endl;
         }
-        cout << "output\n";
-        (*recording_ofs[vm_thread.thread_name]) << "entry " << method->name << endl;
-        cout << "output end\n";
+        
+        if (recording_ofs.find(file) == recording_ofs.end())
+        {
+            ofstream *out = new ofstream(file);
+            recording_ofs[file] = out;
+        }
+        (*recording_ofs[file]) << "entry " << method->name << endl;
         VMModel::DellocateThread(vm_env, &vm_thread);
     }
 
@@ -129,7 +129,9 @@ namespace _VMMethodService
     {
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
-        (*recording_ofs[vm_thread.thread_name]) << "exit " << method->name << endl;
+        char *file = strcat(strcat(recording_folder, vm_thread.thread_name), ".txt");
+        (*recording_ofs[file]) << "exit " << method->name << endl;
+        VMModel::DellocateThread(vm_env, &vm_thread);
     }
 }
 
@@ -245,6 +247,7 @@ void VMMethodService::GetMethodTrace(char *file)
 
 VMMethodService::~VMMethodService()
 {
+    std::cout << "delete method service" << std::endl;
     map<char*, ofstream*>::iterator it = _VMMethodService::recording_ofs.begin();
     while(it != _VMMethodService::recording_ofs.end()) {
         it->second->close();

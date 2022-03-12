@@ -29,6 +29,7 @@ namespace Bootstrap
 
     void Destroyed()
     {
+        std::cout << "delete" << std::endl;
         std::map<char *, VMService *>::iterator it;
         std::map<char *, VMService *>::iterator it_end;
         it = services.begin();
