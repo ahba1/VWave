@@ -48,7 +48,6 @@ namespace _VMMethodService
 {
     map<char*, VMMethodHandler> entry_filters;
     map<char*, VMMethodHandler> exit_filters;
-    map<char*, ofstream*> recording_ofs;
     char *recording_folder;
 
     void JNICALL HandleMethodEntry(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, jmethodID methodID)
@@ -111,17 +110,9 @@ namespace _VMMethodService
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
         char *file = strcat(strcat(recording_folder, vm_thread.thread_name), ".txt");
-        if (strcmp(vm_thread.thread_name, "main"))
-        {
-            cout << vm_thread.thread_name <<endl;
-        }
-        
-        if (recording_ofs.find(file) == recording_ofs.end())
-        {
-            ofstream *out = new ofstream(file);
-            recording_ofs[file] = out;
-        }
-        (*recording_ofs[file]) << "entry " << method->name << endl;
+        cout << "prepare for outputs\n";
+        FileTool::Output(file, strcat(strcat("init ", method->name), "\n"), strlen(method->name));
+        cout << "outputs end\n";
         VMModel::DellocateThread(vm_env, &vm_thread);
     }
 
@@ -130,7 +121,7 @@ namespace _VMMethodService
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
         char *file = strcat(strcat(recording_folder, vm_thread.thread_name), ".txt");
-        (*recording_ofs[file]) << "exit " << method->name << endl;
+        FileTool::Output(file, strcat(strcat("exit ", method->name), "\n"), strlen(method->name));
         VMModel::DellocateThread(vm_env, &vm_thread);
     }
 }
@@ -241,17 +232,17 @@ void VMMethodService::AddExitFilter(char *filter, _VMMethodService::VMMethodHand
 void VMMethodService::GetMethodTrace(char *file)
 {
     _VMMethodService::recording_folder = file;
-    AddEntryFilter(".*", _VMMethodService::RecordVMMethodEntryHandler);
-    AddExitFilter(".*", _VMMethodService::RecordVMMethodExitHandler);
+    int error = FileTool::Start();
+    cout << error <<endl;
+    if (!error)
+    {
+        //AddEntryFilter(".*", _VMMethodService::RecordVMMethodEntryHandler);
+        //AddExitFilter(".*", _VMMethodService::RecordVMMethodExitHandler);
+    }
 }
 
 VMMethodService::~VMMethodService()
 {
+    FileTool::Stop();
     std::cout << "delete method service" << std::endl;
-    map<char*, ofstream*>::iterator it = _VMMethodService::recording_ofs.begin();
-    while(it != _VMMethodService::recording_ofs.end()) {
-        it->second->close();
-        delete it->second;
-        it++;
-    }
 }

@@ -9,4 +9,14 @@ namespace Exception {
 
     extern void HandleException(int error);
 }
+
+namespace FileTool {
+    extern int Start();
+
+    extern int Stop();
+
+    extern int Output(char *path, char *content, int len);
+
+    extern int Input(char *path, char *src, int len);
+}
 #endif
