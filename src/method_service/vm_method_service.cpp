@@ -128,12 +128,7 @@ namespace _VMMethodService
 
 VMMethodService::VMMethodService(jvmtiEnv *vm_env) : VMService(vm_env)
 {
-    jvmtiCapabilities caps;
-    memset(&caps, 0, sizeof(caps));
-    caps.can_generate_method_entry_events = 1;
-    caps.can_generate_method_exit_events = 1;
-    jvmtiError e = vm_env->AddCapabilities(&caps);
-    Exception::HandleException(e);
+    
 }
 
 void VMMethodService::DispatchCMD(char *key, char *value)

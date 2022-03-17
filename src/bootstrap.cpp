@@ -13,17 +13,39 @@ namespace Bootstrap
 {
     using namespace Global;
 
+    char *_options;
+
     void Init(JavaVM *vm, char *options, void *reserved);
     void Destroyed();
     void PreParseOptions(char *options);
     void LoadService(char *service_name, char **options, int options_size);
     int CheckParams(const char *key_params, char *params);
 
+    void JNICALL OnVMInit(jvmtiEnv *jvmti, JNIEnv *env, jthread thr)
+    {
+        Global::global_jni_env = env;
+        Global::global_agent_thread = &thr;
+        PreParseOptions(_options);
+    }
+
     void Init(JavaVM *vm, char *options, void *reserved)
     {
+        jvmtiError error;
         global_java_vm = vm;
+        _options = options;
         vm->GetEnv(reinterpret_cast<void **>(&global_vm_env), JVMTI_VERSION_1_0);
-        PreParseOptions(options);
+        jvmtiCapabilities caps;
+        memset(&caps, 0, sizeof(caps));
+        caps.can_generate_method_entry_events = 1;
+        caps.can_generate_method_exit_events = 1;
+        jvmtiError e = global_vm_env->AddCapabilities(&caps);
+        Exception::HandleException(e);
+        jvmtiEventCallbacks callbacks;
+        callbacks.VMInit = &OnVMInit;
+        error = global_vm_env->SetEventCallbacks(&callbacks, static_cast<jint>(sizeof(callbacks)));
+        Exception::HandleException(error);
+        error = global_vm_env->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_INIT, 0);
+        Exception::HandleException(error);
         std::cout << "load successfully..." << std::endl;
     }
 
