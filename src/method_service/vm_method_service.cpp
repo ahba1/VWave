@@ -111,7 +111,15 @@ namespace _VMMethodService
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
         char *file = strcat(strcat(recording_folder, vm_thread.thread_name), ".txt");
         cout << "prepare for outputs\n";
-        FileTool::Output(file, strcat(strcat("init ", method->name), "\n"), strlen(method->name));
+        cout << method->name <<endl;
+        cout << strlen(method->name) <<endl;
+        cout << strlen("enter ") <<endl;
+        cout << strcat("enter ", method->name) <<endl;
+        //char *content = strcat(, "\n");
+        //cout << content <<endl;
+        // int len = strlen(content);
+        // cout << len <<endl;
+        // FileTool::Output(file, content, len);
         cout << "outputs end\n";
         VMModel::DellocateThread(vm_env, &vm_thread);
     }
@@ -128,7 +136,12 @@ namespace _VMMethodService
 
 VMMethodService::VMMethodService(jvmtiEnv *vm_env) : VMService(vm_env)
 {
-    
+    jvmtiCapabilities caps;
+    memset(&caps, 0, sizeof(caps));
+    caps.can_generate_method_entry_events = 1;
+    caps.can_generate_method_exit_events = 1;
+    jvmtiError e = vm_env->AddCapabilities(&caps);
+    Exception::HandleException(e);
 }
 
 void VMMethodService::DispatchCMD(char *key, char *value)
@@ -231,8 +244,8 @@ void VMMethodService::GetMethodTrace(char *file)
     cout << error <<endl;
     if (!error)
     {
-        //AddEntryFilter(".*", _VMMethodService::RecordVMMethodEntryHandler);
-        //AddExitFilter(".*", _VMMethodService::RecordVMMethodExitHandler);
+        AddEntryFilter(".*", _VMMethodService::RecordVMMethodEntryHandler);
+        AddExitFilter(".*", _VMMethodService::RecordVMMethodExitHandler);
     }
 }
 

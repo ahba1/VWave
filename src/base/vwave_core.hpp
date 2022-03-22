@@ -19,4 +19,16 @@ namespace FileTool {
 
     extern int Output(char *path, char *content, int len);
 }
+
+namespace StringTool {
+    
+}
+
+namespace ThreadTool {
+    typedef void* (*Runnable)(void*);
+
+    extern int StartThread(pthread_t thread, Runnable runnable);
+
+    extern int Test();
+}
 #endif

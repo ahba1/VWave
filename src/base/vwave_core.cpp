@@ -3,10 +3,11 @@
 #include <map>
 #include <iostream>
 #include <fstream>
+#include <unistd.h>
+#include <sys/syscall.h>
 
 #include "vwave_core.hpp"
 #include "../global.hpp"
-
 
 namespace Exception
 {
@@ -65,44 +66,34 @@ namespace FileTool
     pthread_t spin_out_thread;
     pthread_t spin_input_thread;
 
-    
-    
-    pthread_cond_t output_cond;
-    pthread_cond_t input_cond;
-
-    pthread_mutex_t output_mutex;
-    pthread_mutex_t input_mutex;
-
     queue<FileData*> out_queue;
-    queue<FileData*> input_queue;
 
     map<char*, ofstream*> outputs;
-    map<char*, ifstream*> inputs;
 
-    int interrupted = 0;
+    volatile int interrupted = 0;
 
-    void JNICALL output(jvmtiEnv* jvmti_env, JNIEnv* jni_env, void* arg) {
+    void* _output(void* params) {
         jint error;
         cout << "currented thread has been attached\n";
         while (!interrupted)
         {
             while (!out_queue.empty())
             {
+                cout<<"enter loop\n";
                 FileData *data = out_queue.front();
                 (*outputs[data->file])<<data->content;
                 delete data;
                 out_queue.pop();
             }
         }
-        error = Global::global_java_vm->DetachCurrentThread();
         Exception::HandleException(error);
         cout << "currented thread has been dettached\n";
     }
 
     int Start()
     {
+        ThreadTool::StartThread(spin_out_thread, _output);
         interrupted = 0;
-        Global::global_vm_env->RunAgentThread(*Global::global_agent_thread, output, NULL, JVMTI_THREAD_NORM_PRIORITY);
         return 0;
     }
 
@@ -132,5 +123,26 @@ namespace FileTool
         data->len = len;
         out_queue.push(data);
         return 0;
+    }
+}
+
+namespace ThreadTool {
+    void* ThreadToolTest(void* params) {
+        std::cout<<"ThreadToolTest Method. Current Thread's id is "<<syscall(SYS_gettid)<<std::endl;
+    }
+
+    int StartThread(pthread_t thread, Runnable runnable) {
+        std::cout<<"StartThread Method. Current Thread's id is "<<syscall(SYS_gettid)<<std::endl;
+        int res = pthread_create(&thread, NULL, runnable, NULL);
+        if (res)
+        {
+            std::cout<<"failed to run thread\n";
+        }
+        return res;        
+    }
+
+    int Test() {
+        pthread_t thread;
+        return StartThread(thread, ThreadToolTest);
     }
 }
