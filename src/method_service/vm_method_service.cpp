@@ -107,30 +107,41 @@ namespace _VMMethodService
     //todo create another file to record thread switch
     void RecordVMMethodEntryHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
     {
-        VMModel::VMThread vm_thread;
-        VMModel::MapVMThread(vm_env, thread, &vm_thread);
-        char *file = strcat(strcat(recording_folder, vm_thread.thread_name), ".txt");
-        cout << "prepare for outputs\n";
-        cout << method->name <<endl;
-        cout << strlen(method->name) <<endl;
-        cout << strlen("enter ") <<endl;
-        cout << strcat("enter ", method->name) <<endl;
-        //char *content = strcat(, "\n");
-        //cout << content <<endl;
-        // int len = strlen(content);
-        // cout << len <<endl;
-        // FileTool::Output(file, content, len);
-        cout << "outputs end\n";
-        VMModel::DellocateThread(vm_env, &vm_thread);
+        // jvmtiError error;
+        // VMModel::VMThread vm_thread;
+        // VMModel::MapVMThread(vm_env, thread, &vm_thread);
+
+        // char *file_suffix = ".txt";
+        // char *file;
+        // error = vm_env->Allocate(strlen(recording_folder) + strlen(vm_thread.thread_name) + strlen(file_suffix), reinterpret_cast<unsigned char**>(&file));
+        // Exception::HandleException(error);
+        // strcpy(file, recording_folder);
+        // strcat(file, vm_thread.thread_name);
+        // strcat(file, file_suffix);
+        // //cout << file <<endl;
+
+        // char *content_prefix = "enter ";
+        // char *content;
+        // error = vm_env->Allocate(strlen(content_prefix) + strlen(method->name) + 1, reinterpret_cast<unsigned char**>(&content));
+        // Exception::HandleException(error);
+        // strcpy(content, content_prefix);
+        // strcat(content, method->name);
+        // strcat(content, "\n");
+        // //cout << content;
+        // FileTool::Output(file, content, strlen(content));
+
+        // VMModel::DellocateThread(vm_env, &vm_thread);
+        // error = vm_env->Deallocate(reinterpret_cast<unsigned char*>(file));
+        // error = vm_env->Deallocate(reinterpret_cast<unsigned char*>(content));
     }
 
     void RecordVMMethodExitHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
     {
-        VMModel::VMThread vm_thread;
-        VMModel::MapVMThread(vm_env, thread, &vm_thread);
-        char *file = strcat(strcat(recording_folder, vm_thread.thread_name), ".txt");
-        FileTool::Output(file, strcat(strcat("exit ", method->name), "\n"), strlen(method->name));
-        VMModel::DellocateThread(vm_env, &vm_thread);
+        // VMModel::VMThread vm_thread;
+        // VMModel::MapVMThread(vm_env, thread, &vm_thread);
+        // char *file = strcat(strcat(recording_folder, vm_thread.thread_name), ".txt");
+        // FileTool::Output(file, strcat(strcat("exit ", method->name), "\n"), strlen(method->name));
+        // VMModel::DellocateThread(vm_env, &vm_thread);
     }
 }
 
@@ -189,7 +200,7 @@ void VMMethodService::ParseOptions(char **options, int option_size)
         char **cmd_kv = split(options[i], _spilt_kv_token, _max_kv_size, &kv_size);
         if (kv_size = _max_kv_size)
         {
-            std::cout << cmd_kv[0] << "=" << cmd_kv[1] << std::endl;
+            //std::cout << cmd_kv[0] << "=" << cmd_kv[1] << std::endl;
             DispatchCMD(cmd_kv[0], cmd_kv[1]);
         }
     }
@@ -241,7 +252,6 @@ void VMMethodService::GetMethodTrace(char *file)
 {
     _VMMethodService::recording_folder = file;
     int error = FileTool::Start();
-    cout << error <<endl;
     if (!error)
     {
         AddEntryFilter(".*", _VMMethodService::RecordVMMethodEntryHandler);

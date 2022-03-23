@@ -46,7 +46,7 @@ namespace Bootstrap
 
     void PreParseOptions(char *options)
     {
-        std::cout << options << std::endl;
+        //std::cout << options << std::endl;
         int option_size = 0;
         char **res = split(options, _spilt_token, _max_options_size, &option_size);
         if (option_size > 0)
@@ -69,8 +69,8 @@ namespace Bootstrap
 
     void LoadService(char *service_name, char **options, int options_size)
     {
-        std::cout << service_name << std::endl;
-        std::cout << *options << std::endl;
+        //std::cout << service_name << std::endl;
+        //std::cout << *options << std::endl;
         if (!strcmp(service_name, "method"))
         {
             VMMethodService *method_service = new VMMethodService(global_vm_env);
@@ -114,7 +114,7 @@ Agent_OnLoad(JavaVM *vm, char *options, void *reserved)
 {
     try
     {
-        cout<<options<<endl;
+        //cout<<options<<endl;
         if (!strcmp(options, "test"))
         {
             Bootstrap::Test(vm, options, reserved);

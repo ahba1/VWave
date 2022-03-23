@@ -21,7 +21,7 @@ namespace FileTool {
 }
 
 namespace StringTool {
-    
+    class VString;
 }
 
 namespace ThreadTool {
