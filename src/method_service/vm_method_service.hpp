@@ -39,6 +39,8 @@ private:
 public:
     VMMethodService(jvmtiEnv *vm_env);
 
+    VMMethodService();
+
     void ParseOptions(char **options, int option_size) override;
 
     char *GetServiceName() override;

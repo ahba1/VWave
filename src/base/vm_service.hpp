@@ -1,5 +1,6 @@
 #pragma once
 #include <jvmti.h>
+#include <../global.hpp>
 
 class VMService
 {
@@ -11,6 +12,11 @@ public:
     VMService(jvmtiEnv *vm_env)
     {
         this->vm_env = vm_env;
+    }
+
+    VMService()
+    {
+        this->vm_env = Global::global_vm_env;
     }
 
     ~VMService()

@@ -3,6 +3,8 @@
 
 #include <iostream>
 #include <jvmti.h>
+#include <queue>
+#include <string.h>
 
 namespace Exception {
     extern void HandleException(jvmtiError error);
@@ -21,7 +23,20 @@ namespace FileTool {
 }
 
 namespace StringTool {
-    class VString;
+
+    struct VString
+    {
+        char *src;
+        int len;
+    };
+
+    struct VStringCompareKey
+    {
+        bool operator()(VString* first, VString* second) const
+        {
+            return strcmp(first->src, second->src);
+        }
+    };
 }
 
 namespace ThreadTool {
@@ -30,5 +45,12 @@ namespace ThreadTool {
     extern int StartThread(pthread_t thread, Runnable runnable);
 
     extern int Test();
+}
+
+namespace CollectionTool {
+    extern void ForEachMap();
+
+    template<class T>
+    extern void Dequeue(std::queue<T> src, T *data);
 }
 #endif

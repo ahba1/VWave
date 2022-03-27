@@ -1,8 +1,6 @@
 #include <pthread.h>
-#include <queue>
 #include <map>
 #include <iostream>
-#include <string.h>
 #include <fstream>
 #include <unistd.h>
 #include <sys/syscall.h>
@@ -52,69 +50,6 @@ namespace Exception
     }
 }
 
-namespace StringTool
-{
-    class VString
-    {
-    private:
-        char *_src;
-        int len;
-    public:
-        VString(char *src)
-        {
-            jvmtiError e = Global::global_vm_env->Allocate(strlen(src), reinterpret_cast<unsigned char **>(&_src));
-            strcpy(_src, src);
-            len = strlen(_src);
-            Exception::HandleException(e);
-        }
-        VString()
-        {
-            _src = NULL;
-            len = 0;
-        }
-        ~VString()
-        {
-            jvmtiError e = Global::global_vm_env->Deallocate(reinterpret_cast<unsigned char *>(_src));
-            Exception::HandleException(e);
-        }
-        VString operator+(const VString &vstr) const
-        {
-            VString res;
-            jvmtiError e = Global::global_vm_env->Allocate(vstr.len + len, reinterpret_cast<unsigned char**>(&res._src));
-            Exception::HandleException(e);
-            strcpy(res._src, _src);
-            strcat(res._src, vstr._src);
-            res.len = strlen(res._src);
-            return res;
-        }
-        VString operator+(const char* &str) const
-        {
-            VString res;
-            jvmtiError e = Global::global_vm_env->Allocate(strlen(str) + len, reinterpret_cast<unsigned char**>(&res._src));
-            Exception::HandleException(e);
-            strcpy(res._src, _src);
-            strcat(res._src, str);
-            return res;
-        }
-        bool operator<(const VString &vstr) const
-        {
-            cout << _src << " " << vstr._src << endl;
-            cout << (strcmp(vstr._src, _src) < 0) <<endl;
-            cout << (strcmp(vstr._src, _src) > 0) <<endl;
-            return strcmp(vstr._src, _src) < 0;
-        }
-        bool operator<(const char* &str) const
-        {
-            return strcmp(str, _src) < 0;
-        }
-        friend ostream & operator<<(ostream &out, VString &vstr)
-        {
-            out << vstr._src;
-            return out;
-        }
-    };
-}
-
 namespace FileTool
 {
     struct FileData
@@ -131,28 +66,68 @@ namespace FileTool
     pthread_t spin_input_thread;
 
     queue<FileData *> out_queue;
-
+    map<StringTool::VString *, std::ofstream *, StringTool::VStringCompareKey> outputs;
 
     volatile int interrupted = 0;
 
+    void closeFile()
+    {
+
+    }
+
     void *_output(void *params)
     {
-        jint error;
-        cout << "currented thread has been attached\n";
+        jvmtiError error;
+        int count = 0;
         while (!interrupted)
         {
             while (!out_queue.empty())
             {
-                // cout << "enter loop\n";
-                // FileData *data = out_queue.front();
-                // //(*outputs[data->file]) << data->content;
-                // delete data;
-                // out_queue.pop();
-                // cout << "exit loop\n";
+                FileData *data = out_queue.front();
+                out_queue.pop();
+                cout<<data->file;
+                cout<< data->content;
+                StringTool::VString *vpath;
+                error = Global::global_vm_env->Allocate(sizeof(StringTool::VString), reinterpret_cast<unsigned char**>(&vpath));
+                Exception::HandleException(error);
+                vpath->src=data->file;
+                vpath->len=strlen(data->file);
+                if (outputs.count(vpath) == 0)
+                {
+                    std::ofstream *ofs;
+                    error = Global::global_vm_env->Allocate(sizeof(std::ofstream), reinterpret_cast<unsigned char**>(&ofs));
+                    Exception::HandleException(error);
+                    ofs->open(data->file);
+                    outputs.insert(make_pair(vpath, ofs));
+                    // cout <<"\n";
+                    // cout << "open file" << endl;
+                    // cout <<"\n";
+                    (*outputs[vpath]) << data->content;
+                    count++;
+                } else {
+                    (*outputs[vpath]) << data->content;
+                    count++;
+                    if (count == 20)
+                    {
+                        count=0;
+                        outputs[vpath]->flush();
+                    }
+                    error = Global::global_vm_env->Deallocate(reinterpret_cast<unsigned char*>(vpath));
+                }
+                error = Global::global_vm_env->Deallocate(reinterpret_cast<unsigned char*>(data->file));
+                error = Global::global_vm_env->Deallocate(reinterpret_cast<unsigned char*>(data->content));
+                error = Global::global_vm_env->Deallocate(reinterpret_cast<unsigned char*>(data));
+                Exception::HandleException(error);
             }
         }
-        Exception::HandleException(error);
-        cout << "currented thread has been dettached\n";
+        map<StringTool::VString *, std::ofstream *>::iterator it = outputs.begin();
+        while (it != outputs.end())
+        {
+            it->second->close();
+            error = Global::global_vm_env->Deallocate(reinterpret_cast<unsigned char*>(it->second));
+            error = Global::global_vm_env->Deallocate(reinterpret_cast<unsigned char*>(it->first));
+            Exception::HandleException(error);
+        }
     }
 
     int Start()
@@ -167,31 +142,18 @@ namespace FileTool
         interrupted = 1;
         pthread_join(spin_out_thread, NULL);
         cout << "exit main thread\n";
-        // map<StringTool::VString, ofstream *>::iterator it = outputs.begin();
-        // while (it != outputs.end())
-        // {
-        //     it->second->close();
-        //     delete it->second;
-        // }
         return 0;
     }
 
     int Output(char *path, char *content, int len)
     {
-        StringTool::VString vpath(path);
-        // if (outputs.count(vpath) == 0)
-        // {
-        //     ofstream *ofs = new ofstream();
-        //     ofs->open(path);
-        //     outputs[vpath] = ofs;
-        //     cout << "open file" << endl;
-        // }
-        // FileData *data = new FileData();
-        // data->file = path;
-        // data->content = content;
-        // data->len = len;
-        // out_queue.push(data);
-        // cout << "output end\n";
+        FileData *data;
+        jvmtiError error = Global::global_vm_env->Allocate(sizeof(FileData), reinterpret_cast<unsigned char **>(&data));
+        Exception::HandleException(error);
+        data->file = path;
+        data->content = content;
+        data->len = len;
+        out_queue.push(data);
         return 0;
     }
 }
@@ -205,7 +167,7 @@ namespace ThreadTool
 
     int StartThread(pthread_t thread, Runnable runnable)
     {
-        //std::cout << "StartThread Method. Current Thread's id is " << syscall(SYS_gettid) << std::endl;
+        // std::cout << "StartThread Method. Current Thread's id is " << syscall(SYS_gettid) << std::endl;
         int res = pthread_create(&thread, NULL, runnable, NULL);
         if (res)
         {

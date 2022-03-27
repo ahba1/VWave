@@ -190,6 +190,16 @@ VMThreadService::VMThreadService(jvmtiEnv *env) : VMService(env)
     Exception::HandleException(e);
 }
 
+VMThreadService::VMThreadService() : VMService()
+{
+    jvmtiCapabilities caps;
+    memset(&caps, 0, sizeof(caps));
+    caps.can_signal_thread = 1;
+    jvmtiError e = vm_env->AddCapabilities(&caps);
+    Exception::HandleException(e);
+}
+
+
 void VMThreadService::DispatchCMD(char *key, char *value)
 {
 }
