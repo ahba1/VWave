@@ -1,13 +1,10 @@
 #include <iostream>
-#include <map>
 
 #include <jvmti.h>
 #include <fastcommon/shared_func.h>
 
 #include "global.hpp"
-#include "base/vm_service.hpp"
 #include "method_service/vm_method_service.hpp"
-#include "thread_service/vm_thread_service.hpp"
 
 namespace Bootstrap
 {
@@ -17,31 +14,35 @@ namespace Bootstrap
     void Destroyed();
     void PreParseOptions(char *options);
     void LoadService(char *service_name, char **options, int options_size);
+    void Test(JavaVM *vm, char *options, void *reserved);
+    void PreToolInit();
     int CheckParams(const char *key_params, char *params);
 
-    void Test(JavaVM *vm, char *options, void *reserved);
+    typedef void (*SimplestMethod)();
+
+    SimplestMethod *_DestroyMethods;
+    int _DestroyMethodsLen = 0;
+
+    void PreToolInit()
+    {
+        Logger::Init(Logger::Verbose | Logger::Debug | Logger::Info);
+    }
 
     void Init(JavaVM *vm, char *options, void *reserved)
     {
+        PreToolInit();
         global_java_vm = vm;
         vm->GetEnv(reinterpret_cast<void **>(&global_vm_env), JVMTI_VERSION_1_0);
         PreParseOptions(options);
-        std::cout << "load successfully..." << std::endl;
+        Logger::i("Bootstrap::Init", "load successfully");
     }
 
     void Destroyed()
     {
-        std::cout << "delete" << std::endl;
-        std::map<char *, VMService *>::iterator it;
-        std::map<char *, VMService *>::iterator it_end;
-        it = services.begin();
-        it_end = services.end();
-
-        while (it != it_end)
-        {
-            delete it->second;
-            it++;
-        }
+        // for (int i = 0;i < _DestroyMethodsLen;i++)
+        // {
+        //     _DestroyMethods[i]();
+        // }
     }
 
     void PreParseOptions(char *options)
@@ -57,8 +58,7 @@ namespace Bootstrap
             char *value = cmd_kv[1];
             if (CheckParams(_param_1, key))
             {
-                std::cout << "unsupport parameter?: ";
-                std::cout << key << std::endl;
+                Logger::e("Parse", key);
                 return;
             }
             Bootstrap::LoadService(value, &res[1], option_size - 1);
@@ -69,33 +69,14 @@ namespace Bootstrap
 
     void LoadService(char *service_name, char **options, int options_size)
     {
-        //std::cout << service_name << std::endl;
-        //std::cout << *options << std::endl;
         if (!strcmp(service_name, "method"))
         {
-            VMMethodService *method_service = new VMMethodService(global_vm_env);
-            services[service_name] = method_service;
-            method_service->ParseOptions(options, options_size);
+            Logger::i("LoadService", service_name);
+            VMMethodService::Init(options, options_size);
+            _DestroyMethodsLen++;
             return;
         }
-        if (!strcmp(service_name, "thread"))
-        {
-            VMThreadService *thread_service = new VMThreadService(global_vm_env);
-            services[service_name] = thread_service;
-            thread_service->ParseOptions(options, options_size);
-            return;
-        }
-        if (!strcmp(service_name, "thread_method"))
-        {
-            VMThreadService *thread_service = new VMThreadService(global_vm_env);
-            services["thread"] = thread_service;
-            VMMethodService *method_service = new VMMethodService(global_vm_env);
-            services["method"] = method_service;
-            thread_service->ParseOptions(options, options_size);
-            return;
-        }
-        std::cout << "unsupport parameters: ";
-        std::cout << service_name << std::endl;
+        Logger::e("Load", service_name);
     }
 
     int CheckParams(const char *key_params, char *params)
@@ -146,7 +127,7 @@ JNIEXPORT void JNICALL
 Agent_OnUnload(JavaVM *vm)
 {
     Bootstrap::Destroyed();
-    std::cout << "destroyed\n";
+    Logger::i("Destroy", "destroy successfully");
 }
 
 JNIEXPORT void JNICALL

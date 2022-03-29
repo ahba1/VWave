@@ -32,8 +32,6 @@ private:
 public:
     VMThreadService(jvmtiEnv *vm_env);
 
-    VMThreadService();
-
     ~VMThreadService();
 
     void ParseOptions(char **options, int option_size) override;

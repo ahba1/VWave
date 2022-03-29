@@ -53,4 +53,26 @@ namespace CollectionTool {
     template<class T>
     extern void Dequeue(std::queue<T> src, T *data);
 }
+
+namespace Logger
+{   
+    extern uint8_t Verbose;
+    extern uint8_t Debug;
+    extern uint8_t Info;
+    extern uint8_t Warn;
+    extern uint8_t Error;
+    extern uint8_t UNKNOWN;
+
+    extern void Init(uint8_t level = Verbose);
+
+    extern void v(char *tag, char *content);
+    
+    extern void d(char *tag, char *content);
+
+    extern void i(char *tag, char *content);
+
+    extern void w(char *tag, char *content);
+
+    extern void e(char *tag, char *content);
+}
 #endif

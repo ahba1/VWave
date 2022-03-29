@@ -4,9 +4,14 @@
 #include <fstream>
 #include <unistd.h>
 #include <sys/syscall.h>
+#include <chrono>
 
 #include "vwave_core.hpp"
 #include "../global.hpp"
+
+#define RED "\033[31m"
+#define YELLOW "\033[33m"
+
 
 namespace Exception
 {
@@ -180,5 +185,89 @@ namespace ThreadTool
     {
         pthread_t thread;
         return StartThread(thread, ThreadToolTest);
+    }
+}
+
+namespace Logger 
+{
+    uint8_t Verbose = 0x00000001;
+    uint8_t Debug = 0x00000010;
+    uint8_t Info = 0x00000100;
+    uint8_t Warn = 0x00001000;
+    uint8_t Error = 0x00010000;
+    uint8_t UNKNOWN = 0;
+    uint8_t CurrentLevel = UNKNOWN;
+
+    void Init(uint8_t level)
+    {
+        CurrentLevel = level;
+    }
+
+    void _InterOut(char *tag, char *content, char *color = NULL)
+    {
+        auto now = std::chrono::system_clock::now();
+        uint64_t dis_millseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+            now.time_since_epoch()
+        ).count() - std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() * 1000;
+        time_t tt = std::chrono::system_clock::to_time_t(now);
+        auto time_tm = localtime(&tt);
+        char strTime[25] = {0};
+        sprintf(strTime, 
+            "%d-%02d-%02d %02d:%02d:%02d %03d", 
+            time_tm->tm_year + 1900,
+            time_tm->tm_mon + 1,
+            time_tm->tm_mday,
+            time_tm->tm_hour,
+            time_tm->tm_min,
+            time_tm->tm_sec,
+            (int)dis_millseconds
+        );
+        if (color != NULL)
+        {
+            std::cout << strTime << " : " << tag << "  " << content << std::endl;
+        } else {
+            std::cout << color << strTime << " : " << tag << "  " << content << std::endl;
+        }
+        
+    }
+
+    void v(char *tag, char *content)
+    {
+        if (CurrentLevel & Verbose)
+        {
+            _InterOut(tag, content);
+        }
+    }
+
+    void d(char *tag, char *content)
+    {
+        if (CurrentLevel & Debug)
+        {
+            _InterOut(tag, content);
+        }
+    }
+
+    void i(char *tag, char *content)
+    {
+        if (CurrentLevel & Info)
+        {
+            _InterOut(tag, content);
+        }
+    }
+
+    void w(char *tag, char *content)
+    {
+        if (CurrentLevel & Warn)
+        {
+            _InterOut(tag, content, YELLOW);
+        }
+    }
+
+    void e(char *tag, char *content)
+    {
+        if (CurrentLevel & Error)
+        {
+            _InterOut(tag, content, RED);
+        }
     }
 }
