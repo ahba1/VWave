@@ -32,6 +32,5 @@ main() {
   create_and_enter_build_folder
   build_phase_cmake
   build_phase_make
-  echo 'build successfully'
 }
 main

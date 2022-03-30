@@ -10,18 +10,6 @@
 
 namespace VMModel
 {
-    class VMThread
-    {
-    public:
-        jthread _thread;
-        jint _thread_state;
-        char *thread_state;
-        jvmtiThreadInfo *_info;
-        char *thread_name;
-        jint thread_priority;
-        jboolean is_daemon;
-        // temprorily not add group info and class loader info
-    };
 
     void MapVMThread(jvmtiEnv *env, jthread thread, VMThread *vm_thread)
     {
