@@ -64,17 +64,20 @@ namespace VMMethodService
         strcpy(file, recording_folder);
         strcat(file, vm_thread.thread_name);
         strcat(file, file_suffix);
-        //cout << file <<endl;
 
         char *content_prefix = "enter ";
         char *content;
-        error = vm_env->Allocate(strlen(content_prefix) + strlen(method->name) + 1, reinterpret_cast<unsigned char**>(&content));
+        error = vm_env->Allocate(strlen(content_prefix) + strlen(method->name) + 2, reinterpret_cast<unsigned char**>(&content));
         Exception::HandleException(error);
         strcpy(content, content_prefix);
         strcat(content, method->name);
         strcat(content, "\n");
-        //cout << content;
+
         FileTool::Output(file, content, strlen(content));
+        // error = vm_env->Deallocate(reinterpret_cast<unsigned char*>(file));
+        // Exception::HandleException(error);
+        // error = vm_env->Deallocate(reinterpret_cast<unsigned char*>(content));
+        // Exception::HandleException(error);
 
         VMModel::DellocateThread(vm_env, &vm_thread);
     }
@@ -84,23 +87,23 @@ namespace VMMethodService
         jvmtiError error;
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
+
         char *file_suffix = ".txt";
         char *file;
-        error = vm_env->Allocate(strlen(recording_folder) + strlen(vm_thread.thread_name) + strlen(file_suffix) + 1, reinterpret_cast<unsigned char**>(&file));
+        error = vm_env->Allocate(strlen(recording_folder) + strlen(vm_thread.thread_name) + strlen(file_suffix), reinterpret_cast<unsigned char**>(&file));
         Exception::HandleException(error);
         strcpy(file, recording_folder);
         strcat(file, vm_thread.thread_name);
         strcat(file, file_suffix);
-        //cout << file <<endl;
 
         char *content_prefix = "exit ";
         char *content;
-        error = vm_env->Allocate(strlen(content_prefix) + strlen(method->name) + 1, reinterpret_cast<unsigned char**>(&content));
+        error = vm_env->Allocate(strlen(content_prefix) + strlen(method->name) + 2, reinterpret_cast<unsigned char**>(&content));
         Exception::HandleException(error);
         strcpy(content, content_prefix);
         strcat(content, method->name);
         strcat(content, "\n");
-        //cout << content;
+
         FileTool::Output(file, content, strlen(content));
         VMModel::DellocateThread(vm_env, &vm_thread);
     }
@@ -117,6 +120,8 @@ namespace VMMethodService
 
     void _DispathCMD(char *key, char *value)
     {
+        Logger::d("MethodService", key);
+        Logger::d("MethodService", value);
         if (!strcmp(key, "record"))
         {
             if (value)
@@ -225,6 +230,8 @@ namespace VMMethodService
             AddEntryFilter(".*", _RecordVMMethodEntryHandler);
             AddExitFilter(".*", _RecordVMMethodExitHandler);
         }
+        //AddEntryFilter(".*", _RecordVMMethodEntryHandler);
+        //AddExitFilter(".*", _RecordVMMethodExitHandler);
         if (!_recordMethodStarted)
         {
             jvmtiEventCallbacks callbacks;
@@ -235,6 +242,8 @@ namespace VMMethodService
             error = Global::global_vm_env->SetEventCallbacks(&callbacks, static_cast<jint>(sizeof(callbacks)));
             Exception::HandleException(error);
             error = Global::global_vm_env->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_ENTRY, 0);
+            Exception::HandleException(error);
+            error = Global::global_vm_env->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_EXIT, 0);
             Exception::HandleException(error);
             _recordMethodStarted = 1;
         }

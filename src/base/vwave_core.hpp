@@ -37,6 +37,14 @@ namespace StringTool {
             return strcmp(first->src, second->src);
         }
     };
+
+    struct CharStrCompareKey
+    {
+        bool operator()(char *first, char *second) const
+        {
+            return strcmp(first, second);
+        }
+    };
 }
 
 namespace ThreadTool {

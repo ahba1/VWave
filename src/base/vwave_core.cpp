@@ -70,8 +70,8 @@ namespace FileTool
     pthread_t spin_out_thread;
     pthread_t spin_input_thread;
 
-    queue<FileData *> out_queue;
-    map<StringTool::VString *, std::ofstream *, StringTool::VStringCompareKey> outputs;
+    static queue<FileData *> out_queue;
+    static map<char*, std::ofstream, StringTool::CharStrCompareKey> outputs;
 
     volatile int interrupted = 0;
 
@@ -89,50 +89,44 @@ namespace FileTool
             while (!out_queue.empty())
             {
                 FileData *data = out_queue.front();
+                //Logger::d("FileTool output", data->content);
+                std::ofstream ofs(data->file, ios::app);
+                ofs << data->content;
+                ofs.close();            
                 out_queue.pop();
-                cout<<data->file;
-                cout<< data->content;
-                StringTool::VString *vpath;
-                error = Global::global_vm_env->Allocate(sizeof(StringTool::VString), reinterpret_cast<unsigned char**>(&vpath));
-                Exception::HandleException(error);
-                vpath->src=data->file;
-                vpath->len=strlen(data->file);
-                if (outputs.count(vpath) == 0)
-                {
-                    std::ofstream *ofs;
-                    error = Global::global_vm_env->Allocate(sizeof(std::ofstream), reinterpret_cast<unsigned char**>(&ofs));
-                    Exception::HandleException(error);
-                    ofs->open(data->file);
-                    outputs.insert(make_pair(vpath, ofs));
-                    // cout <<"\n";
-                    // cout << "open file" << endl;
-                    // cout <<"\n";
-                    (*outputs[vpath]) << data->content;
-                    count++;
-                } else {
-                    (*outputs[vpath]) << data->content;
-                    count++;
-                    if (count == 20)
-                    {
-                        count=0;
-                        outputs[vpath]->flush();
-                    }
-                    error = Global::global_vm_env->Deallocate(reinterpret_cast<unsigned char*>(vpath));
-                }
                 error = Global::global_vm_env->Deallocate(reinterpret_cast<unsigned char*>(data->file));
+                Exception::HandleException(error);
                 error = Global::global_vm_env->Deallocate(reinterpret_cast<unsigned char*>(data->content));
+                Exception::HandleException(error);
                 error = Global::global_vm_env->Deallocate(reinterpret_cast<unsigned char*>(data));
                 Exception::HandleException(error);
+                // if (outputs.count(data->file) == 0)
+                // {
+                //     Logger::d("FileTool", "openfile");
+                //     std::ofstream ofs;
+                //     outputs.insert(make_pair(data->file, ofs));
+                //     outputs[data->file] << data->content;
+                //     count++;
+                // } else {
+                //     Logger::d("FileTool", "file has opened");
+                //     Logger::d("FileTool", data->file);
+                //     outputs[data->file] << data->content;
+                //     count++;
+                //     if (count == 20)
+                //     {
+                //         count=0;
+                //         outputs[data->file].flush();
+                //     }
+                // }
             }
         }
-        map<StringTool::VString *, std::ofstream *>::iterator it = outputs.begin();
-        while (it != outputs.end())
-        {
-            it->second->close();
-            error = Global::global_vm_env->Deallocate(reinterpret_cast<unsigned char*>(it->second));
-            error = Global::global_vm_env->Deallocate(reinterpret_cast<unsigned char*>(it->first));
-            Exception::HandleException(error);
-        }
+        // map<char*, std::ofstream>::iterator it = outputs.begin();
+        // while (it != outputs.end())
+        // {
+        //     it->second.close();
+        //     error = Global::global_vm_env->Deallocate(reinterpret_cast<unsigned char*>(it->first));
+        //     Exception::HandleException(error);
+        // }
     }
 
     int Start()
@@ -176,7 +170,7 @@ namespace ThreadTool
         int res = pthread_create(&thread, NULL, runnable, NULL);
         if (res)
         {
-            std::cout << "failed to run thread\n";
+            Logger::e("ThreadTool", "Start Thread failed");
         }
         return res;
     }
@@ -190,16 +184,17 @@ namespace ThreadTool
 
 namespace Logger 
 {
-    uint8_t Verbose = 0x00000001;
-    uint8_t Debug = 0x00000010;
-    uint8_t Info = 0x00000100;
-    uint8_t Warn = 0x00001000;
-    uint8_t Error = 0x00010000;
+    uint8_t Verbose = 1;
+    uint8_t Debug = 1 << 1;
+    uint8_t Info = 1 << 2;
+    uint8_t Warn = 1 << 3;
+    uint8_t Error = 1 << 4;
     uint8_t UNKNOWN = 0;
     uint8_t CurrentLevel = UNKNOWN;
 
     void Init(uint8_t level)
     {
+        std::cout << level << std::endl;
         CurrentLevel = level;
     }
 
@@ -222,13 +217,7 @@ namespace Logger
             time_tm->tm_sec,
             (int)dis_millseconds
         );
-        if (color != NULL)
-        {
-            std::cout << strTime << " : " << tag << "  " << content << std::endl;
-        } else {
-            std::cout << color << strTime << " : " << tag << "  " << content << std::endl;
-        }
-        
+        std::cout << strTime << " : " << tag << "  " << content << std::endl;
     }
 
     void v(char *tag, char *content)

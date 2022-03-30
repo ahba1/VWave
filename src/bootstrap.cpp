@@ -26,6 +26,7 @@ namespace Bootstrap
     void PreToolInit()
     {
         Logger::Init(Logger::Verbose | Logger::Debug | Logger::Info);
+        Logger::i("Logger", "Init Success");
     }
 
     void Init(JavaVM *vm, char *options, void *reserved)
