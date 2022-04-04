@@ -66,37 +66,39 @@ namespace VMModel {
     const ThreadState INTERRUPTED = 1 << 21; 
     const ThreadState IN_NATIVE = 1 << 22;
 
-    class Clazz {
-    public:
-        jclass _klazz;
+    struct ClazzMeta
+    {
+        jclass _clazz;
+    };
+
+    struct VMClazz
+    {
+        ClazzMeta *meta;
+        char *source_file;
+    };
+
+    extern void MapJClazz(jclass klazz, VMClazz **clazz);
+
+    extern void DellcateClazz(VMClazz *clazz);
+
+    struct Meta
+    {
+        jmethodID _id;
+        jclass _clazz;
+    };
+
+    struct Method
+    {
+        Meta *meta;
         char *name;
         char *signature;
         char *generic;
-        AccessFlag access_flag;
-        jboolean isInterface;
+        jint access_flag;
+        jboolean is_native;
     };
-    void MapJClazz(jvmtiEnv *env, jclass klazz, Clazz *clazz);
 
-/****************************************method**************************************/
+    void MapJMethod(jmethodID methodID, Method **method);
 
-    // typedef char* (*MethodFormat)(char*, int, int, bool); //to-do implement this pt
-    // /**
-    //  * @brief 
-    //  * A basical static info about a method
-    //  */
-    // class Method {
-    // public:
-    //     Clazz *clazz;
-    //     jmethodID _methodID;
-    //     char *name;        
-    //     char *generic;
-    //     char *signature;
-    //     AccessFlag access_flag;
-    //     int param_len;
-    //     jboolean isNative;
-    // };
-
-    // void MapJMethod(jvmtiEnv *env, jmethodID methodID, Method *method);
-    // void DeallocateMethod(jvmtiEnv *env, Method *method);
+    void DellocateMethod(Method *method);
 }
 #endif

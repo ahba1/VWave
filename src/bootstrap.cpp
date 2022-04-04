@@ -5,6 +5,7 @@
 
 #include "global.hpp"
 #include "method_service/vm_method_service.hpp"
+#include "class_service/vm_class_service.hpp"
 
 namespace Bootstrap
 {
@@ -74,6 +75,7 @@ namespace Bootstrap
         {
             Logger::i("LoadService", service_name);
             VMMethodService::Init(options, options_size);
+            //VMClassService::Init(options, options_size);
             _DestroyMethodsLen++;
             return;
         }

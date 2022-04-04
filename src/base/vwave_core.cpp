@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <chrono>
+#include <execinfo.h>
 
 #include "vwave_core.hpp"
 #include "../global.hpp"
@@ -15,6 +16,21 @@
 
 namespace Exception
 {
+    void PrintStackTrace()
+    {
+        void *buffer[Global::_stack_trace_depth] = {0};
+        int num = backtrace(buffer, Global::_stack_trace_depth);
+        char **symbols = backtrace_symbols(buffer, num);
+        if(symbols)
+        {
+            for(int i=0;i<num;i++)
+            {
+                std::cout<< symbols[i] <<std::endl;
+            }
+            delete symbols;
+        }
+    }
+
     void HandleException(jvmtiError error)
     {
         switch (error)
@@ -22,6 +38,7 @@ namespace Exception
         case JVMTI_ERROR_NONE:
             break;
         default:
+            PrintStackTrace();
             std::cout << "internal exception happened\n";
             std::cout << error << "\n";
             throw error;
