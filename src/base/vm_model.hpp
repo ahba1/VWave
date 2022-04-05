@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <jvmti.h>
+#include <chrono>
 #include "vwave_core.hpp"
 
 namespace VMModel {
@@ -100,5 +101,15 @@ namespace VMModel {
     void MapJMethod(jmethodID methodID, Method **method);
 
     void DellocateMethod(Method *method);
+
+    struct MethodFrame
+    {
+        char *name;
+        std::chrono::time_point<std::chrono::high_resolution_clock> *tm;
+    };
+
+    void CreateMethodFrame(MethodFrame **mf, const char *method);
+
+    void DellocateMethodFrame(MethodFrame *mf);
 }
 #endif

@@ -72,9 +72,92 @@ namespace Exception
     }
 }
 
+namespace StringTool
+{
+    void Replace(char *str1, char *str2, char *str3)
+    {
+        int i, j, k, done, count = 0, gap = 0;
+        char temp[100];
+        for (i = 0; i < strlen(str1); i += gap)
+        {
+            if (str1[i] == str2[0])
+            {
+                done = 0;
+                for (j = i, k = 0; k < strlen(str2); j++, k++)
+                {
+                    if (str1[j] != str2[k])
+                    {
+                        done = 1;
+                        gap = k;
+                        break;
+                    }
+                }
+                if (done == 0)
+                { 
+                    for (j = i + strlen(str2), k = 0; j < strlen(str1); j++, k++)
+                    { 
+                        temp[k] = str1[j];
+                    }
+                    temp[k] = '\0'; 
+                    for (j = i, k = 0; k < strlen(str3); j++, k++)
+                    { 
+                        str1[j] = str3[k];
+                        count++;
+                    }
+                    for (k = 0; k < strlen(temp); j++, k++)
+                    { 
+                        str1[j] = temp[k];
+                    }
+                    str1[j] = '\0'; 
+                    gap = strlen(str2);
+                }
+            }
+            else
+            {
+                gap = 1;
+            }
+        }
+        if (count == 0)
+        {
+            printf("Can't find the replaced string!\n");
+        }
+        return;
+    }
+
+    void Concat(char **dest, const char* src, ...)
+    {
+        // va_list va_src;
+        // va_start(va_src, src);
+
+        // while (va_arg(va_src, int) != -1)
+        // {
+
+        // }
+        // if (src.size() < 1)
+        // {
+        //     return;
+        // }
+        // jvmtiError e;
+        // int len = 0;
+        // for (auto p = src.begin(); p != src.end(); p++)
+        // {
+        //     len += strlen(*p);
+        // }
+        // e = Global::global_vm_env->Allocate(len + 1, reinterpret_cast<Global::memory_alloc_ptr>(dest));
+        // Exception::HandleException(e);
+        // auto begin = src.begin();
+        // strcpy(*dest, *begin);
+        // begin++;
+        // for (; begin != src.end(); begin++)
+        // {
+        //     strcat(*dest, *begin);
+        // }
+    }
+}
+
 namespace FileTool
 {
-    struct FileData
+    struct CharStrFileData
     {
         char *file;
         char *content;
@@ -87,7 +170,7 @@ namespace FileTool
     pthread_t spin_out_thread;
     pthread_t spin_input_thread;
 
-    static queue<FileData *> out_queue;
+    static queue<CharStrFileData *> out_queue;
     static map<char*, std::ofstream, StringTool::CharStrCompareKey> outputs;
 
     volatile int interrupted = 0;
@@ -105,7 +188,7 @@ namespace FileTool
         {
             while (!out_queue.empty())
             {
-                FileData *data = out_queue.front();
+                CharStrFileData *data = out_queue.front();
                 //Logger::d("FileTool output", data->content);
                 std::ofstream ofs(data->file, ios::app);
                 ofs << data->content;
@@ -163,8 +246,8 @@ namespace FileTool
 
     int Output(char *path, char *content, int len)
     {
-        FileData *data;
-        jvmtiError error = Global::global_vm_env->Allocate(sizeof(FileData), reinterpret_cast<unsigned char **>(&data));
+        CharStrFileData *data;
+        jvmtiError error = Global::global_vm_env->Allocate(sizeof(CharStrFileData), reinterpret_cast<unsigned char **>(&data));
         Exception::HandleException(error);
         data->file = path;
         data->content = content;

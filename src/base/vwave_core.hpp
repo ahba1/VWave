@@ -5,6 +5,7 @@
 #include <jvmti.h>
 #include <queue>
 #include <string.h>
+#include <stdarg.h>
 
 namespace Exception
 {
@@ -49,55 +50,9 @@ namespace StringTool
         }
     };
 
-    void Replace(char *str1, char *str2, char *str3)
-    {
-        int i, j, k, done, count = 0, gap = 0;
-        char temp[100];
-        for (i = 0; i < strlen(str1); i += gap)
-        {
-            if (str1[i] == str2[0])
-            {
-                done = 0;
-                for (j = i, k = 0; k < strlen(str2); j++, k++)
-                {
-                    if (str1[j] != str2[k])
-                    {
-                        done = 1;
-                        gap = k;
-                        break;
-                    }
-                }
-                if (done == 0)
-                { 
-                    for (j = i + strlen(str2), k = 0; j < strlen(str1); j++, k++)
-                    { 
-                        temp[k] = str1[j];
-                    }
-                    temp[k] = '\0'; 
-                    for (j = i, k = 0; k < strlen(str3); j++, k++)
-                    { 
-                        str1[j] = str3[k];
-                        count++;
-                    }
-                    for (k = 0; k < strlen(temp); j++, k++)
-                    { 
-                        str1[j] = temp[k];
-                    }
-                    str1[j] = '\0'; 
-                    gap = strlen(str2);
-                }
-            }
-            else
-            {
-                gap = 1;
-            }
-        }
-        if (count == 0)
-        {
-            printf("Can't find the replaced string!\n");
-        }
-        return;
-    }
+    void Replace(char *str1, char *str2, char *str3);
+
+    void Concat(char **dest, const char* src, ...);
 }
 
 namespace ThreadTool

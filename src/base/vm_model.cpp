@@ -58,5 +58,32 @@ namespace VMModel
         error = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(method->generic));
         Exception::HandleException(error);
         error = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(method));
+        Exception::HandleException(error);
+    }
+
+    void CreateMethodFrame(MethodFrame **mf, const char *method)
+    {
+        using namespace std::chrono;
+        jvmtiError error;
+        time_point<high_resolution_clock> _time = high_resolution_clock::now();
+        error = Global::global_vm_env->Allocate(sizeof(MethodFrame), reinterpret_cast<Global::memory_alloc_ptr>(mf));
+        Exception::HandleException(error);
+        error = Global::global_vm_env->Allocate(strlen(method) + 1, reinterpret_cast<Global::memory_alloc_ptr>(&(*mf)->name));
+        Exception::HandleException(error);
+        error = Global::global_vm_env->Allocate(sizeof(time_point<high_resolution_clock>), reinterpret_cast<Global::memory_alloc_ptr>(&(*mf)->tm));
+        Exception::HandleException(error);
+        strcpy((*mf)->name, method);
+        *((*mf)->tm) = _time;
+    }
+
+    void DellocateMethodFrame(MethodFrame *mf)
+    {
+        jvmtiError error;
+        error = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(mf->tm));
+        Exception::HandleException(error);
+        error = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(mf->name));
+        Exception::HandleException(error);
+        error = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(mf));
+        Exception::HandleException(error);
     }
 }

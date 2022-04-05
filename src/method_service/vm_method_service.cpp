@@ -2,7 +2,10 @@
 #include <fstream>
 #include <stdio.h>
 #include <map>
+#include <stack>
 #include <regex>
+#include <chrono>
+#include <sstream>
 
 #include <shared_func.h>
 
@@ -24,18 +27,65 @@ namespace VMMethodService
 {
     map<char*, VMMethodHandler> entry_filters;
     map<char*, VMMethodHandler> exit_filters;
+    stack<VMModel::MethodFrame*> method_stack;
+
     char *recording_folder;
     int _recordMethodStarted = 0;
+    const char *_cost_file = "./cost.txt";
+
+    void _SetMethodEntryTime(char *method)
+    {
+        VMModel::MethodFrame *mf;
+        VMModel::CreateMethodFrame(&mf, method);
+        method_stack.push(mf);
+    }
+
+    void _ResolveMethodEntryTime(char *method)
+    {
+        using namespace std::chrono;
+        time_point<high_resolution_clock> _time = high_resolution_clock::now();
+        while (!method_stack.empty())
+        {
+            VMModel::MethodFrame *mf = method_stack.top();
+            method_stack.pop();
+            if (!strcmp(mf->name, method))
+            {
+                duration<double, std::milli> tm = _time - *mf->tm;
+                double ms = tm.count();
+                ostringstream oss;
+                oss << ms;
+                const char *ms_str = oss.str().c_str();
+                char *midfix = ": ";
+                char *suffix = "ms\n";
+                int len = strlen(method) + strlen(midfix) + strlen(ms_str) + strlen(suffix) + 1;
+                char *content;
+                jvmtiError e = Global::global_vm_env->Allocate(len, reinterpret_cast<Global::memory_alloc_ptr>(&content));
+                Exception::HandleException(e);
+                strcpy(content, method);
+                strcat(content, midfix);
+                strcat(content, ms_str);
+                strcat(content, suffix);
+                //StringTool::Concat(&content, {method, ": ", ms_str, suffix});
+                char *path;
+                e = Global::global_vm_env->Allocate(strlen(_cost_file), reinterpret_cast<Global::memory_alloc_ptr>(&path));
+                Exception::HandleException(e);
+                strcpy(path, _cost_file);
+                FileTool::Output(path, content, len);
+            }
+            VMModel::DellocateMethodFrame(mf);
+        }
+    }
 
     void _RecordVMMethodEntryHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
     {
+        _SetMethodEntryTime(method->name);
         jvmtiError error;
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
-
+        
         char *file_suffix = ".txt";
         char *file;
-        error = vm_env->Allocate(strlen(recording_folder) + strlen(vm_thread.thread_name) + strlen(file_suffix), reinterpret_cast<unsigned char**>(&file));
+        error = vm_env->Allocate(strlen(recording_folder) + strlen(vm_thread.thread_name) + strlen(file_suffix), reinterpret_cast<Global::memory_alloc_ptr>(&file));
         Exception::HandleException(error);
         strcpy(file, recording_folder);
         strcat(file, vm_thread.thread_name);
@@ -63,6 +113,7 @@ namespace VMMethodService
 
     void _RecordVMMethodExitHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
     {
+        _ResolveMethodEntryTime(method->name);
         jvmtiError error;
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
