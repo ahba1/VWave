@@ -124,35 +124,26 @@ namespace StringTool
         return;
     }
 
-    void Concat(char **dest, const char* src, ...)
+    void Concat(char **dest, std::initializer_list<const char*> srcs)
     {
-        // va_list va_src;
-        // va_start(va_src, src);
-
-        // while (va_arg(va_src, int) != -1)
-        // {
-
-        // }
-        // if (src.size() < 1)
-        // {
-        //     return;
-        // }
-        // jvmtiError e;
-        // int len = 0;
-        // for (auto p = src.begin(); p != src.end(); p++)
-        // {
-        //     len += strlen(*p);
-        // }
-        // e = Global::global_vm_env->Allocate(len + 1, reinterpret_cast<Global::memory_alloc_ptr>(dest));
-        // Exception::HandleException(e);
-        // auto begin = src.begin();
-        // strcpy(*dest, *begin);
-        // begin++;
-        // for (; begin != src.end(); begin++)
-        // {
-        //     strcat(*dest, *begin);
-        // }
+        if (srcs.size() < 1)
+        {
+            return;
+        }
+        int len = 1; //at least has a \0
+        for (auto it = srcs.begin(); it != srcs.end(); it++)
+        {
+            len += strlen(*it);
+        }
+        jvmtiError e = Global::global_vm_env->Allocate(len, reinterpret_cast<Global::memory_alloc_ptr>(dest));
+        Exception::HandleException(e);
+        memset(*dest, 0, len);
+        for (auto it = srcs.begin(); it != srcs.end(); it++)
+        {
+            strcat(*dest, *it);
+        }
     }
+
 }
 
 namespace FileTool

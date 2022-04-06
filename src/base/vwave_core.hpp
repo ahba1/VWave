@@ -6,6 +6,7 @@
 #include <queue>
 #include <string.h>
 #include <stdarg.h>
+#include <initializer_list>
 
 namespace Exception
 {
@@ -52,7 +53,7 @@ namespace StringTool
 
     void Replace(char *str1, char *str2, char *str3);
 
-    void Concat(char **dest, const char* src, ...);
+    void Concat(char **dest, std::initializer_list<const char*> srcs);
 }
 
 namespace ThreadTool

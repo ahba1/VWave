@@ -50,6 +50,7 @@ namespace VMMethodService
             method_stack.pop();
             if (!strcmp(mf->name, method))
             {
+                jvmtiError e;
                 duration<double, std::milli> tm = _time - *mf->tm;
                 double ms = tm.count();
                 ostringstream oss;
@@ -59,13 +60,7 @@ namespace VMMethodService
                 char *suffix = "ms\n";
                 int len = strlen(method) + strlen(midfix) + strlen(ms_str) + strlen(suffix) + 1;
                 char *content;
-                jvmtiError e = Global::global_vm_env->Allocate(len, reinterpret_cast<Global::memory_alloc_ptr>(&content));
-                Exception::HandleException(e);
-                strcpy(content, method);
-                strcat(content, midfix);
-                strcat(content, ms_str);
-                strcat(content, suffix);
-                //StringTool::Concat(&content, {method, ": ", ms_str, suffix});
+                StringTool::Concat(&content, {method, ": ", ms_str, suffix});
                 char *path;
                 e = Global::global_vm_env->Allocate(strlen(_cost_file), reinterpret_cast<Global::memory_alloc_ptr>(&path));
                 Exception::HandleException(e);
@@ -83,27 +78,15 @@ namespace VMMethodService
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
         
-        char *file_suffix = ".txt";
         char *file;
-        error = vm_env->Allocate(strlen(recording_folder) + strlen(vm_thread.thread_name) + strlen(file_suffix), reinterpret_cast<Global::memory_alloc_ptr>(&file));
-        Exception::HandleException(error);
-        strcpy(file, recording_folder);
-        strcat(file, vm_thread.thread_name);
-        strcat(file, file_suffix);
+        StringTool::Concat(&file, {recording_folder, vm_thread.thread_name, ".txt"});
 
         VMModel::VMClazz *vm_clazz;
         error = Global::global_vm_env->Allocate(sizeof(VMModel::VMClazz), reinterpret_cast<unsigned char**>(&vm_clazz));
         VMModel::MapJClazz(method->meta->_clazz, &vm_clazz);
-        char *content_prefix = "enter ";
+
         char *content;
-        
-        error = vm_env->Allocate(strlen(content_prefix) + strlen(method->name) + strlen(vm_clazz->source_file) + 4, reinterpret_cast<unsigned char**>(&content));
-        Exception::HandleException(error);
-        strcpy(content, content_prefix);
-        strcat(content, vm_clazz->source_file);
-        strcat(content, "::");
-        strcat(content, method->name);
-        strcat(content, "\n");
+        StringTool::Concat(&content, {"enter ", vm_clazz->source_file, "::", method->name, "\n"});
 
         FileTool::Output(file, content, strlen(content));
         
@@ -118,27 +101,15 @@ namespace VMMethodService
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
 
-        char *file_suffix = ".txt";
         char *file;
-        error = vm_env->Allocate(strlen(recording_folder) + strlen(vm_thread.thread_name) + strlen(file_suffix), reinterpret_cast<unsigned char**>(&file));
-        Exception::HandleException(error);
-        strcpy(file, recording_folder);
-        strcat(file, vm_thread.thread_name);
-        strcat(file, file_suffix);
+        StringTool::Concat(&file, {recording_folder, vm_thread.thread_name, ".txt"});
 
         VMModel::VMClazz *vm_clazz;
         error = Global::global_vm_env->Allocate(sizeof(VMModel::VMClazz), reinterpret_cast<unsigned char**>(&vm_clazz));
         VMModel::MapJClazz(method->meta->_clazz, &vm_clazz);
-        char *content_prefix = "exit ";
+
         char *content;
-        
-        error = vm_env->Allocate(strlen(content_prefix) + strlen(method->name) + strlen(vm_clazz->source_file) + 4, reinterpret_cast<unsigned char**>(&content));
-        Exception::HandleException(error);
-        strcpy(content, content_prefix);
-        strcat(content, vm_clazz->source_file);
-        strcat(content, "::");
-        strcat(content, method->name);
-        strcat(content, "\n");
+        StringTool::Concat(&content, {"exit ", vm_clazz->source_file, "::", method->name, "\n"});
 
         FileTool::Output(file, content, strlen(content));
         
