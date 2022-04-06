@@ -9,6 +9,9 @@
 using namespace std;
 
 namespace Global {
+    typedef unsigned char** memory_alloc_ptr;
+    typedef unsigned char* memory_delloc_ptr;
+
     inline JavaVM *global_java_vm;
     inline jvmtiEnv *global_vm_env;
 
@@ -18,6 +21,7 @@ namespace Global {
     inline const char _spilt_kv_token = '=';
     inline const char _max_options_size = 10;
     inline const char _max_kv_size = 2;
+    inline const char _stack_trace_depth = 5;
 
     inline const char* _param_1 = "service";
 

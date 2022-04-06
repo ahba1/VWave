@@ -2,7 +2,10 @@
 #include <fstream>
 #include <stdio.h>
 #include <map>
+#include <stack>
 #include <regex>
+#include <chrono>
+#include <sstream>
 
 #include <shared_func.h>
 
@@ -10,30 +13,6 @@
 
 namespace VMModel
 {
-
-    class Method
-    {
-    public:
-        jmethodID _methodID;
-        char *name;
-        char *signature;
-        char *generic;
-        jint access_flag;
-        jboolean is_native;
-    };
-
-    void MapJMethod(jvmtiEnv *env, jmethodID methodID, Method *method)
-    {
-        jvmtiError error;
-        method->_methodID = methodID;
-        error = env->GetMethodName(methodID, &method->name, &method->signature, &method->generic);
-        Exception::HandleException(error);
-        error = env->GetMethodModifiers(methodID, &method->access_flag);
-        Exception::HandleException(error);
-        error = env->IsMethodNative(methodID, &method->is_native);
-        Exception::HandleException(error);
-    }
-
     /**
      * @brief
      * format: [access] [static or not] [final or not] [generic] synchronized/native [return-type] [name]([param-type...])
@@ -48,63 +27,93 @@ namespace VMMethodService
 {
     map<char*, VMMethodHandler> entry_filters;
     map<char*, VMMethodHandler> exit_filters;
+    stack<VMModel::MethodFrame*> method_stack;
+
     char *recording_folder;
     int _recordMethodStarted = 0;
+    const char *_cost_file = "./cost.txt";
+
+    void _SetMethodEntryTime(char *method)
+    {
+        VMModel::MethodFrame *mf;
+        VMModel::CreateMethodFrame(&mf, method);
+        method_stack.push(mf);
+    }
+
+    void _ResolveMethodEntryTime(char *method)
+    {
+        using namespace std::chrono;
+        time_point<high_resolution_clock> _time = high_resolution_clock::now();
+        while (!method_stack.empty())
+        {
+            VMModel::MethodFrame *mf = method_stack.top();
+            method_stack.pop();
+            if (!strcmp(mf->name, method))
+            {
+                jvmtiError e;
+                duration<double, std::milli> tm = _time - *mf->tm;
+                double ms = tm.count();
+                ostringstream oss;
+                oss << ms;
+                const char *ms_str = oss.str().c_str();
+                char *midfix = ": ";
+                char *suffix = "ms\n";
+                int len = strlen(method) + strlen(midfix) + strlen(ms_str) + strlen(suffix) + 1;
+                char *content;
+                StringTool::Concat(&content, {method, ": ", ms_str, suffix});
+                char *path;
+                e = Global::global_vm_env->Allocate(strlen(_cost_file), reinterpret_cast<Global::memory_alloc_ptr>(&path));
+                Exception::HandleException(e);
+                strcpy(path, _cost_file);
+                FileTool::Output(path, content, len);
+            }
+            VMModel::DellocateMethodFrame(mf);
+        }
+    }
 
     void _RecordVMMethodEntryHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
     {
+        _SetMethodEntryTime(method->name);
         jvmtiError error;
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
-
-        char *file_suffix = ".txt";
+        
         char *file;
-        error = vm_env->Allocate(strlen(recording_folder) + strlen(vm_thread.thread_name) + strlen(file_suffix), reinterpret_cast<unsigned char**>(&file));
-        Exception::HandleException(error);
-        strcpy(file, recording_folder);
-        strcat(file, vm_thread.thread_name);
-        strcat(file, file_suffix);
+        StringTool::Concat(&file, {recording_folder, vm_thread.thread_name, ".txt"});
 
-        char *content_prefix = "enter ";
+        VMModel::VMClazz *vm_clazz;
+        error = Global::global_vm_env->Allocate(sizeof(VMModel::VMClazz), reinterpret_cast<unsigned char**>(&vm_clazz));
+        VMModel::MapJClazz(method->meta->_clazz, &vm_clazz);
+
         char *content;
-        error = vm_env->Allocate(strlen(content_prefix) + strlen(method->name) + 2, reinterpret_cast<unsigned char**>(&content));
-        Exception::HandleException(error);
-        strcpy(content, content_prefix);
-        strcat(content, method->name);
-        strcat(content, "\n");
+        StringTool::Concat(&content, {"enter ", vm_clazz->source_file, "::", method->name, "\n"});
 
         FileTool::Output(file, content, strlen(content));
-        // error = vm_env->Deallocate(reinterpret_cast<unsigned char*>(file));
-        // Exception::HandleException(error);
-        // error = vm_env->Deallocate(reinterpret_cast<unsigned char*>(content));
-        // Exception::HandleException(error);
-
+        
+        VMModel::DellcateClazz(vm_clazz);
         VMModel::DellocateThread(vm_env, &vm_thread);
     }
 
     void _RecordVMMethodExitHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
     {
+        _ResolveMethodEntryTime(method->name);
         jvmtiError error;
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
 
-        char *file_suffix = ".txt";
         char *file;
-        error = vm_env->Allocate(strlen(recording_folder) + strlen(vm_thread.thread_name) + strlen(file_suffix), reinterpret_cast<unsigned char**>(&file));
-        Exception::HandleException(error);
-        strcpy(file, recording_folder);
-        strcat(file, vm_thread.thread_name);
-        strcat(file, file_suffix);
+        StringTool::Concat(&file, {recording_folder, vm_thread.thread_name, ".txt"});
 
-        char *content_prefix = "exit ";
+        VMModel::VMClazz *vm_clazz;
+        error = Global::global_vm_env->Allocate(sizeof(VMModel::VMClazz), reinterpret_cast<unsigned char**>(&vm_clazz));
+        VMModel::MapJClazz(method->meta->_clazz, &vm_clazz);
+
         char *content;
-        error = vm_env->Allocate(strlen(content_prefix) + strlen(method->name) + 2, reinterpret_cast<unsigned char**>(&content));
-        Exception::HandleException(error);
-        strcpy(content, content_prefix);
-        strcat(content, method->name);
-        strcat(content, "\n");
+        StringTool::Concat(&content, {"exit ", vm_clazz->source_file, "::", method->name, "\n"});
 
         FileTool::Output(file, content, strlen(content));
+        
+        VMModel::DellcateClazz(vm_clazz);
         VMModel::DellocateThread(vm_env, &vm_thread);
     }
 
@@ -115,7 +124,9 @@ namespace VMMethodService
         memset(&caps, 0, sizeof(caps));
         caps.can_generate_method_entry_events = 1;
         caps.can_generate_method_exit_events = 1;
+        caps.can_get_source_file_name = 1;
         jvmtiError e = Global::global_vm_env->AddCapabilities(&caps);
+        Exception::HandleException(e);
     }
 
     void _DispathCMD(char *key, char *value)
@@ -156,10 +167,7 @@ namespace VMMethodService
     {
         jvmtiError error;
         VMModel::Method *method;
-        error = vm_env->Allocate(sizeof(VMModel::Method), reinterpret_cast<unsigned char **>(&method));
-        Exception::HandleException(error);
-        VMModel::MapJMethod(vm_env, methodID, method);
-        error = vm_env->GetMethodName(methodID, &method->name, &method->signature, &method->generic);
+        VMModel::MapJMethod(methodID, &method);
         map<char *, VMMethodHandler>::iterator it;
         it = entry_filters.begin();
         while (it != entry_filters.end())
@@ -170,7 +178,7 @@ namespace VMMethodService
             }
             it++;
         }
-        vm_env->Deallocate(reinterpret_cast<unsigned char *>(method));
+        VMModel::DellocateMethod(method);
     }
 
     void JNICALL _HandleMethodExit(
@@ -183,21 +191,18 @@ namespace VMMethodService
     {
         jvmtiError error;
         VMModel::Method *method;
-        error = jvmti_env->Allocate(sizeof(VMModel::Method), reinterpret_cast<unsigned char **>(&method));
-        Exception::HandleException(error);
-        VMModel::MapJMethod(jvmti_env, methodID, method);
-        error = jvmti_env->GetMethodName(methodID, &method->name, &method->signature, &method->generic);
+        VMModel::MapJMethod(methodID, &method);
         map<char *, VMMethodHandler>::iterator it;
         it = exit_filters.begin();
         while (it != exit_filters.end())
-        {
+        {   
             if (regex_search(method->name, regex(it->first)))
             {
                 it->second(jvmti_env, jni_env, thread, method);
             }
             it++;
         }
-        jvmti_env->Deallocate(reinterpret_cast<unsigned char *>(method));
+        VMModel::DellocateMethod(method);
     }
 
     void Init(char **options, int option_size)
@@ -230,8 +235,6 @@ namespace VMMethodService
             AddEntryFilter(".*", _RecordVMMethodEntryHandler);
             AddExitFilter(".*", _RecordVMMethodExitHandler);
         }
-        //AddEntryFilter(".*", _RecordVMMethodEntryHandler);
-        //AddExitFilter(".*", _RecordVMMethodExitHandler);
         if (!_recordMethodStarted)
         {
             jvmtiEventCallbacks callbacks;

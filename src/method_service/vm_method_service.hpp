@@ -9,10 +9,6 @@ using namespace Global;
 namespace VMModel
 {
 
-    class Method;
-
-    void MapJMethod(jvmtiEnv *env, jmethodID methodID, Method *method);
-
     /**
      * @brief
      * format: [access] [static or not] [final or not] [generic] synchronized/native [return-type] [name]([param-type...])

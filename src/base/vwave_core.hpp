@@ -5,8 +5,11 @@
 #include <jvmti.h>
 #include <queue>
 #include <string.h>
+#include <stdarg.h>
+#include <initializer_list>
 
-namespace Exception {
+namespace Exception
+{
     extern void HandleException(jvmtiError error);
 
     extern void HandleException(int error);
@@ -14,7 +17,8 @@ namespace Exception {
     extern void HandleException(jint error);
 }
 
-namespace FileTool {
+namespace FileTool
+{
     extern int Start();
 
     extern int Stop();
@@ -22,7 +26,8 @@ namespace FileTool {
     extern int Output(char *path, char *content, int len);
 }
 
-namespace StringTool {
+namespace StringTool
+{
 
     struct VString
     {
@@ -32,7 +37,7 @@ namespace StringTool {
 
     struct VStringCompareKey
     {
-        bool operator()(VString* first, VString* second) const
+        bool operator()(VString *first, VString *second) const
         {
             return strcmp(first->src, second->src);
         }
@@ -45,25 +50,31 @@ namespace StringTool {
             return strcmp(first, second);
         }
     };
+
+    void Replace(char *str1, char *str2, char *str3);
+
+    void Concat(char **dest, std::initializer_list<const char*> srcs);
 }
 
-namespace ThreadTool {
-    typedef void* (*Runnable)(void*);
+namespace ThreadTool
+{
+    typedef void *(*Runnable)(void *);
 
     extern int StartThread(pthread_t thread, Runnable runnable);
 
     extern int Test();
 }
 
-namespace CollectionTool {
+namespace CollectionTool
+{
     extern void ForEachMap();
 
-    template<class T>
+    template <class T>
     extern void Dequeue(std::queue<T> src, T *data);
 }
 
 namespace Logger
-{   
+{
     extern uint8_t Verbose;
     extern uint8_t Debug;
     extern uint8_t Info;
@@ -74,7 +85,7 @@ namespace Logger
     extern void Init(uint8_t level = Verbose);
 
     extern void v(char *tag, char *content);
-    
+
     extern void d(char *tag, char *content);
 
     extern void i(char *tag, char *content);
