@@ -8,6 +8,7 @@
 #include <stdarg.h>
 #include <initializer_list>
 
+
 namespace Exception
 {
     extern void HandleException(jvmtiError error);
@@ -93,5 +94,7 @@ namespace Logger
     extern void w(char *tag, char *content);
 
     extern void e(char *tag, char *content);
+
+    extern void i(char *tag, jint content);
 }
 #endif

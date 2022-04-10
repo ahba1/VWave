@@ -29,5 +29,7 @@ namespace VMMethodService
 
     void RecordMethod(char *file);
 
+    void TestMethodFrame();
+
     void Release();
 }

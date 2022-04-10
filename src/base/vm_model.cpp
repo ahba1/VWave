@@ -177,6 +177,7 @@ namespace VMModel
         error = Global::global_vm_env->Allocate(sizeof(StackFrameMeta), reinterpret_cast<Global::memory_alloc_ptr>(&(*sf)->meta));
         Exception::HandleException(error);
         MapJMethod(info->method, &(*sf)->vm_method);
+        Logger::d("Map", (*sf)->vm_method->name);
     }
 
     void DellocateStackFrame(StackFrame *sf)

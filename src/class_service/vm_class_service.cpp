@@ -1,4 +1,4 @@
-#include "service_header/vm_class_service.hpp"
+#include "../service_header/vm_class_service.hpp"
 
 namespace VMClassService
 {

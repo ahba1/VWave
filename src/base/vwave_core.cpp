@@ -289,7 +289,8 @@ namespace Logger
         CurrentLevel = level;
     }
 
-    void _InterOut(char *tag, char *content, char *color = NULL)
+    template<class T>
+    void _InterOut(char *tag, T content, char *color = NULL)
     {
         auto now = std::chrono::system_clock::now();
         uint64_t dis_millseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -348,6 +349,14 @@ namespace Logger
         if (CurrentLevel & Error)
         {
             _InterOut(tag, content, RED);
+        }
+    }
+
+    void i(char *tag, jint content)
+    {
+        if (CurrentLevel & Info)
+        {
+            _InterOut(tag, content);
         }
     }
 }

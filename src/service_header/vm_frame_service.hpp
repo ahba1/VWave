@@ -1,3 +1,6 @@
+#ifndef VM_FRAME_H
+#define VM_FRAME_H
+
 #include "vm_model.hpp"
 #include "../global.hpp"
 
@@ -6,7 +9,11 @@ using namespace Global;
 
 namespace VMFrameService
 {
-    void Init();
+    typedef void (*VMFrameHandler)(VMModel::StackFrame **frame, jint size);
 
-    void GetCurrentMethodFrame(jthread thread, VMModel::StackFrame *frame, jint *size);
+    void Init(char **options, int option_size);
+
+    void GetCurrentMethodFrame(jthread thread, VMFrameHandler handler);
 }
+
+#endif

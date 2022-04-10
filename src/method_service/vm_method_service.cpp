@@ -10,6 +10,7 @@
 #include <shared_func.h>
 
 #include "../service_header/vm_method_service.hpp"
+#include "../service_header/vm_frame_service.hpp"
 
 namespace VMModel
 {
@@ -251,6 +252,37 @@ namespace VMMethodService
             _recordMethodStarted = 1;
         }
         
+    }
+
+    void _MethodFrameHandler(VMModel::StackFrame **frame, jint size)
+    {
+        for (int i = 0; i < size; i++)
+        {
+            Logger::i("VMMethodService", frame[i]->vm_method->name);
+        }
+    }
+
+    void _TestMethodFrameHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
+    {
+        VMFrameService::GetCurrentMethodFrame(thread, _MethodFrameHandler);
+    }
+
+    void TestMethodFrame()
+    {
+        Logger::d("MethodService", "TestMethodFrame");
+        AddEntryFilter("firstMethod", _TestMethodFrameHandler);
+        if (!_recordMethodStarted)
+        {
+            jvmtiEventCallbacks callbacks;
+            memset(&callbacks, 0, sizeof(callbacks));
+            callbacks.MethodEntry = &_HandleMethodEntry;
+            jvmtiError error;
+            error = Global::global_vm_env->SetEventCallbacks(&callbacks, static_cast<jint>(sizeof(callbacks)));
+            Exception::HandleException(error);
+            error = Global::global_vm_env->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_ENTRY, 0);
+            Exception::HandleException(error);
+            _recordMethodStarted = 1;
+        }
     }
 
     void Release()

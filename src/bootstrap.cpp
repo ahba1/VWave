@@ -6,6 +6,7 @@
 #include "global.hpp"
 #include "service_header/vm_method_service.hpp"
 #include "service_header/vm_class_service.hpp"
+#include "service_header/vm_frame_service.hpp"
 
 namespace Bootstrap
 {
@@ -13,7 +14,7 @@ namespace Bootstrap
 
     void Init(JavaVM *vm, char *options, void *reserved);
     void Destroyed();
-    void PreParseOptions(char *options);
+    void PreParseOptions(char *options, bool isTest);
     void LoadService(char *service_name, char **options, int options_size);
     void Test(JavaVM *vm, char *options, void *reserved);
     void PreToolInit();
@@ -35,7 +36,7 @@ namespace Bootstrap
         PreToolInit();
         global_java_vm = vm;
         vm->GetEnv(reinterpret_cast<void **>(&global_vm_env), JVMTI_VERSION_1_0);
-        PreParseOptions(options);
+        PreParseOptions(options, !strcmp(options, "test"));
         Logger::i("Bootstrap::Init", "load successfully");
     }
 
@@ -47,9 +48,15 @@ namespace Bootstrap
         // }
     }
 
-    void PreParseOptions(char *options)
+    void PreParseOptions(char *options, bool isTest)
     {
         //std::cout << options << std::endl;
+        if (isTest)
+        {
+            Test(Global::global_java_vm, options, NULL);
+            return;
+        }
+        
         int option_size = 0;
         char **res = split(options, _spilt_token, _max_options_size, &option_size);
         if (option_size > 0)
@@ -89,7 +96,10 @@ namespace Bootstrap
 
     void Test(JavaVM *vm, char *options, void *reserved) 
     {
-        ThreadTool::Test();
+        //ThreadTool::Test();
+        VMMethodService::Init(NULL, 0);
+        VMFrameService::Init(NULL, 0);
+        VMMethodService::TestMethodFrame();
     }
 }
 
@@ -98,13 +108,7 @@ Agent_OnLoad(JavaVM *vm, char *options, void *reserved)
 {
     try
     {
-        //cout<<options<<endl;
-        if (!strcmp(options, "test"))
-        {
-            Bootstrap::Test(vm, options, reserved);
-        } else {
-            Bootstrap::Init(vm, options, reserved);
-        }
+        Bootstrap::Init(vm, options, reserved);
     }
     catch (jvmtiError &e)
     {
