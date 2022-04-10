@@ -111,5 +111,21 @@ namespace VMModel {
     void CreateMethodFrame(MethodFrame **mf, const char *method);
 
     void DellocateMethodFrame(MethodFrame *mf);
+
+    struct StackFrameMeta
+    {
+        jvmtiFrameInfo *_frame_info;
+        jvmtiStackInfo *_owner_info;
+    };
+
+    struct StackFrame
+    {
+        StackFrameMeta *meta;
+        Method *vm_method;
+    };
+
+    void MapStackFrame(jvmtiFrameInfo *info, StackFrame **sf);
+
+    void DellocateStackFrame(StackFrame *sf);
 }
 #endif

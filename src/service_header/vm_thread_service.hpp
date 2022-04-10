@@ -1,5 +1,5 @@
-#include "../base/vm_service.hpp"
-#include "../base/vm_model.hpp"
+#include "vm_service.hpp"
+#include "vm_model.hpp"
 
 #include "../global.hpp"
 

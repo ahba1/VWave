@@ -9,7 +9,7 @@
 
 #include <shared_func.h>
 
-#include "vm_method_service.hpp"
+#include "../service_header/vm_method_service.hpp"
 
 namespace VMModel
 {

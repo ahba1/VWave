@@ -7,7 +7,7 @@
 #include <chrono>
 #include <execinfo.h>
 
-#include "vwave_core.hpp"
+#include "../service_header/vwave_core.hpp"
 #include "../global.hpp"
 
 #define RED "\033[31m"

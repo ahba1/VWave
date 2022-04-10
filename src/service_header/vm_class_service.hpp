@@ -1,4 +1,4 @@
-#include "../base/vm_model.hpp"
+#include "vm_model.hpp"
 #include "../global.hpp"
 
 namespace VMClassService

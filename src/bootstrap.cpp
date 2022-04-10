@@ -4,8 +4,8 @@
 #include <fastcommon/shared_func.h>
 
 #include "global.hpp"
-#include "method_service/vm_method_service.hpp"
-#include "class_service/vm_class_service.hpp"
+#include "service_header/vm_method_service.hpp"
+#include "service_header/vm_class_service.hpp"
 
 namespace Bootstrap
 {
