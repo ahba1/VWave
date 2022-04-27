@@ -36,6 +36,7 @@ namespace Bootstrap
         PreToolInit();
         global_java_vm = vm;
         vm->GetEnv(reinterpret_cast<void **>(&global_vm_env), JVMTI_VERSION_1_0);
+        global_jni_env = (JNIEnv*)global_vm_env;
         PreParseOptions(options, !strcmp(options, "test"));
         Logger::i("Bootstrap::Init", "load successfully");
     }
@@ -97,9 +98,12 @@ namespace Bootstrap
     void Test(JavaVM *vm, char *options, void *reserved) 
     {
         //ThreadTool::Test();
+
         VMMethodService::Init(NULL, 0);
         VMFrameService::Init(NULL, 0);
         VMMethodService::TestMethodFrame();
+
+        // CollectionTool::TestForeach();
     }
 }
 

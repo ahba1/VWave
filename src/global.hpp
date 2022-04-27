@@ -14,6 +14,7 @@ namespace Global {
 
     inline JavaVM *global_java_vm;
     inline jvmtiEnv *global_vm_env;
+    inline JNIEnv *global_jni_env;
 
     inline streambuf *globalOuter = cout.rdbuf();
 

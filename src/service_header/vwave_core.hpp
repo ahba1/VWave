@@ -4,9 +4,11 @@
 #include <iostream>
 #include <jvmti.h>
 #include <queue>
+#include <vector>
 #include <string.h>
 #include <stdarg.h>
 #include <initializer_list>
+#define foreach(src, size) for(int i = 0; i < size; i++)
 
 
 namespace Exception
@@ -72,6 +74,8 @@ namespace CollectionTool
 
     template <class T>
     extern void Dequeue(std::queue<T> src, T *data);
+
+    extern void TestForeach();
 }
 
 namespace Logger

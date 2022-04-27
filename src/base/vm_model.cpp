@@ -84,6 +84,18 @@ namespace VMModel
         jvmtiError error;
         error = env->Deallocate(reinterpret_cast<unsigned char *>(vm_thread->_info));
     }
+
+    void TestClassLoad(jclass clazz) 
+    {
+        char *name;
+        cout<<"?"<<endl;
+        jvmtiError error = Global::global_vm_env->GetSourceFileName(clazz, &name);
+        cout<<"??"<<endl;
+        Exception::HandleException(error);
+        Logger::d("TestClassLoad", name);
+        error = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(name));
+        Exception::HandleException(error);
+    }
     
     void MapJClazz(jclass klazz, VMClazz **clazz)
     {
@@ -96,6 +108,14 @@ namespace VMModel
         _clazz->meta->_clazz = klazz;
         error = Global::global_vm_env->GetSourceFileName(klazz, &_clazz->source_file);
         Exception::HandleException(error);
+        // jclass clazz_obj = Global::global_jni_env->GetObjectClass(klazz);
+        // //sig rule: (params)return
+        // jmethodID mid = Global::global_jni_env->GetMethodID(clazz_obj, "getName", "()Ljava/lang/String;");
+        // jstring jName = (jstring)Global::global_jni_env->CallObjectMethod(klazz, mid);
+        // const char *name = Global::global_jni_env->GetStringUTFChars(jName, NULL);
+        // cout<<name<<endl;
+        // Global::global_jni_env->ReleaseStringUTFChars(jName, name);
+        // Global::global_jni_env->DeleteLocalRef(clazz_obj);
     }
 
     void DellcateClazz(VMClazz *clazz)

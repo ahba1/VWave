@@ -273,6 +273,18 @@ namespace ThreadTool
     }
 }
 
+namespace CollectionTool
+{
+    void TestForeach()
+    {
+        int s[] = {1, 2 ,3};
+        foreach(s, 3)
+        {
+            std::cout << "??";
+        }
+    }
+}
+
 namespace Logger 
 {
     uint8_t Verbose = 1;

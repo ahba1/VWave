@@ -76,6 +76,7 @@ namespace VMModel {
     {
         ClazzMeta *meta;
         char *source_file;
+        char *package_name;
     };
 
     extern void MapJClazz(jclass klazz, VMClazz **clazz);
