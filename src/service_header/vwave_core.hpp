@@ -15,7 +15,7 @@ namespace Exception
 {
     extern void HandleException(jvmtiError error);
 
-    extern void HandleException(int error);
+    extern void HandleExternalException(int error);
 
     extern void HandleException(jint error);
 }
@@ -57,6 +57,10 @@ namespace StringTool
     void Replace(char *str1, char *str2, char *str3);
 
     void Concat(char **dest, std::initializer_list<const char*> srcs);
+
+    int ConvertJString(jstring input, VString **output);
+
+    int DeallocateVString(VString* vstring);
 }
 
 namespace ThreadTool

@@ -108,14 +108,21 @@ namespace VMModel
         _clazz->meta->_clazz = klazz;
         error = Global::global_vm_env->GetSourceFileName(klazz, &_clazz->source_file);
         Exception::HandleException(error);
-        // jclass clazz_obj = Global::global_jni_env->GetObjectClass(klazz);
-        // //sig rule: (params)return
-        // jmethodID mid = Global::global_jni_env->GetMethodID(clazz_obj, "getName", "()Ljava/lang/String;");
-        // jstring jName = (jstring)Global::global_jni_env->CallObjectMethod(klazz, mid);
-        // const char *name = Global::global_jni_env->GetStringUTFChars(jName, NULL);
-        // cout<<name<<endl;
-        // Global::global_jni_env->ReleaseStringUTFChars(jName, name);
-        // Global::global_jni_env->DeleteLocalRef(clazz_obj);
+        JNIEnv *jni;
+        int ret = Global::AllocateJNIEnv(&jni);
+        Exception::HandleExternalException(ret);
+        jclass clazz_obj = jni->GetObjectClass(klazz);
+        //sig rule: (params)return
+        jmethodID mid = jni->GetMethodID(clazz_obj, "getName", "()Ljava/lang/String;");
+        jstring jName = (jstring)jni->CallObjectMethod(klazz, mid);
+        //cout<<jName<<endl;
+        //jni->DeleteLocalRef(clazz_obj);
+        //jni->DeleteLocalRef(jName);
+        // Global::DeallocateJNIEnv(jni);
+        // StringTool::VString *test_out;
+        // StringTool::ConvertJString(jName, &test_out);
+        // Logger::d("MapJClazz", test_out->src);
+        // StringTool::DeallocateVString(test_out);
     }
 
     void DellcateClazz(VMClazz *clazz)

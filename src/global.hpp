@@ -14,7 +14,6 @@ namespace Global {
 
     inline JavaVM *global_java_vm;
     inline jvmtiEnv *global_vm_env;
-    inline JNIEnv *global_jni_env;
 
     inline streambuf *globalOuter = cout.rdbuf();
 
@@ -28,6 +27,13 @@ namespace Global {
 
     inline const char* support_service[] = {"method"};
     inline const int support_service_size = 1;
+
+    inline const int ERROR_JAVA_VM_NULL = -1;
+    inline const int ERROR_NONE = 0;
+
+    int AllocateJNIEnv(JNIEnv **env);
+
+    int DeallocateJNIEnv(JNIEnv *env);
 }
 
 #endif

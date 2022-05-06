@@ -36,7 +36,6 @@ namespace Bootstrap
         PreToolInit();
         global_java_vm = vm;
         vm->GetEnv(reinterpret_cast<void **>(&global_vm_env), JVMTI_VERSION_1_0);
-        global_jni_env = (JNIEnv*)global_vm_env;
         PreParseOptions(options, !strcmp(options, "test"));
         Logger::i("Bootstrap::Init", "load successfully");
     }
@@ -124,7 +123,6 @@ Agent_OnLoad(JavaVM *vm, char *options, void *reserved)
         std::cout << e.what() << "\n";
         return JNI_ERR;
     }
-
     return JNI_OK;
 }
 

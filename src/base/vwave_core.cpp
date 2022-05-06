@@ -144,6 +144,35 @@ namespace StringTool
         }
     }
 
+    int ConvertJString(jstring input, VString **output)
+    {
+        jvmtiError error;
+        JNIEnv *env;
+        jint ret = Global::AllocateJNIEnv(&env);
+        Exception::HandleExternalException(ret);
+        error = Global::global_vm_env->Allocate(sizeof(VString), reinterpret_cast<Global::memory_alloc_ptr>(output));
+        Exception::HandleException(error);
+        VString *_output = *output;
+        _output->len = reinterpret_cast<int>(env->GetStringUTFLength(input));
+        const char *value = env->GetStringUTFChars(input, NULL);
+        error = Global::global_vm_env->Allocate(_output->len, reinterpret_cast<Global::memory_alloc_ptr>(&_output->src));
+        Exception::HandleException(error);
+        for (int i = 0; i < _output->len; i++)
+        {
+            _output->src[i] = value[i];
+        }
+        env->ReleaseStringUTFChars(input, value);
+        Global::DeallocateJNIEnv(env);
+        return 0;
+    }
+
+    int DeallocateVString(VString* vstring)
+    {
+        jvmtiError error;
+        error = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(vstring->src));
+        Exception::HandleException(error);
+        return 0;
+    }
 }
 
 namespace FileTool
