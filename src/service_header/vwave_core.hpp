@@ -4,15 +4,18 @@
 #include <iostream>
 #include <jvmti.h>
 #include <queue>
+#include <vector>
 #include <string.h>
 #include <stdarg.h>
 #include <initializer_list>
+#define foreach(src, size) for(int i = 0; i < size; i++)
+
 
 namespace Exception
 {
     extern void HandleException(jvmtiError error);
 
-    extern void HandleException(int error);
+    extern void HandleExternalException(int error);
 
     extern void HandleException(jint error);
 }
@@ -54,6 +57,14 @@ namespace StringTool
     void Replace(char *str1, char *str2, char *str3);
 
     void Concat(char **dest, std::initializer_list<const char*> srcs);
+
+    void Copy(char **dest, char *source);
+
+    int ConvertJString(jstring input, VString **output);
+
+    int ConvertJString(jstring input, char **dest);
+
+    int DeallocateVString(VString* vstring);
 }
 
 namespace ThreadTool
@@ -71,6 +82,8 @@ namespace CollectionTool
 
     template <class T>
     extern void Dequeue(std::queue<T> src, T *data);
+
+    extern void TestForeach();
 }
 
 namespace Logger
@@ -93,5 +106,7 @@ namespace Logger
     extern void w(char *tag, char *content);
 
     extern void e(char *tag, char *content);
+
+    extern void i(char *tag, jint content);
 }
 #endif

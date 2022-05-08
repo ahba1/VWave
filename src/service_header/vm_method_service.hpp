@@ -1,5 +1,4 @@
-#include "../base/vm_service.hpp"
-#include "../base/vm_model.hpp"
+#include "vm_model.hpp"
 
 #include "../global.hpp"
 
@@ -29,6 +28,8 @@ namespace VMMethodService
     void AddExitFilter(char *filter, VMMethodHandler handler);
 
     void RecordMethod(char *file);
+
+    void TestMethodFrame();
 
     void Release();
 }

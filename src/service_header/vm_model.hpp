@@ -76,6 +76,7 @@ namespace VMModel {
     {
         ClazzMeta *meta;
         char *source_file;
+        char *full_name;
     };
 
     extern void MapJClazz(jclass klazz, VMClazz **clazz);
@@ -98,6 +99,8 @@ namespace VMModel {
         jboolean is_native;
     };
 
+    void GetMethodFullName(char **dest, Method *method, VMClazz *clazz);
+
     void MapJMethod(jmethodID methodID, Method **method);
 
     void DellocateMethod(Method *method);
@@ -111,5 +114,21 @@ namespace VMModel {
     void CreateMethodFrame(MethodFrame **mf, const char *method);
 
     void DellocateMethodFrame(MethodFrame *mf);
+
+    struct StackFrameMeta
+    {
+        jvmtiFrameInfo *_frame_info;
+        jvmtiStackInfo *_owner_info;
+    };
+
+    struct StackFrame
+    {
+        StackFrameMeta *meta;
+        Method *vm_method;
+    };
+
+    void MapStackFrame(jvmtiFrameInfo *info, StackFrame **sf);
+
+    void DellocateStackFrame(StackFrame *sf);
 }
 #endif

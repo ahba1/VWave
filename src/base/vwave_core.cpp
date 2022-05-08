@@ -7,7 +7,7 @@
 #include <chrono>
 #include <execinfo.h>
 
-#include "vwave_core.hpp"
+#include "../service_header/vwave_core.hpp"
 #include "../global.hpp"
 
 #define RED "\033[31m"
@@ -144,6 +144,58 @@ namespace StringTool
         }
     }
 
+    void Copy(char **dest, char *source)
+    {
+        jvmtiError error = Global::global_vm_env->Allocate(strlen(source) + 1, reinterpret_cast<Global::memory_alloc_ptr>(dest));
+        Exception::HandleException(error);
+        strcpy(*dest, source);
+    }
+
+    int ConvertJString(jstring input, VString **output)
+    {
+        jvmtiError error;
+        JNIEnv *env;
+        jint ret = Global::AllocateJNIEnv(&env);
+        Exception::HandleExternalException(ret);
+        error = Global::global_vm_env->Allocate(sizeof(VString), reinterpret_cast<Global::memory_alloc_ptr>(output));
+        Exception::HandleException(error);
+        VString *_output = *output;
+        _output->len = reinterpret_cast<int>(env->GetStringUTFLength(input));
+        const char *value = env->GetStringUTFChars(input, NULL);
+        error = Global::global_vm_env->Allocate(_output->len, reinterpret_cast<Global::memory_alloc_ptr>(&_output->src));
+        Exception::HandleException(error);
+        for (int i = 0; i < _output->len; i++)
+        {
+            _output->src[i] = value[i];
+        }
+        env->ReleaseStringUTFChars(input, value);
+        Global::DeallocateJNIEnv(env);
+        return 0;
+    }
+
+    int ConvertJString(jstring input, char **dest)
+    {
+        jvmtiError error;
+        JNIEnv *env;
+        jint ret = Global::AllocateJNIEnv(&env);
+        Exception::HandleExternalException(ret);
+        int len = reinterpret_cast<int>(env->GetStringLength(input));
+        error = Global::global_vm_env->Allocate(len + 1, reinterpret_cast<Global::memory_alloc_ptr>(dest));
+        Exception::HandleException(error);
+        const char *value = env->GetStringUTFChars(input, NULL);
+        strcpy(*dest, value);
+        env->ReleaseStringUTFChars(input, value);
+        Global::DeallocateJNIEnv(env);
+        return 0;
+    }
+
+    int DeallocateVString(VString* vstring)
+    {
+        jvmtiError error;
+        error = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(vstring->src));
+        Exception::HandleException(error);
+        return 0;
+    }
 }
 
 namespace FileTool
@@ -273,6 +325,18 @@ namespace ThreadTool
     }
 }
 
+namespace CollectionTool
+{
+    void TestForeach()
+    {
+        int s[] = {1, 2 ,3};
+        foreach(s, 3)
+        {
+            std::cout << "??";
+        }
+    }
+}
+
 namespace Logger 
 {
     uint8_t Verbose = 1;
@@ -289,7 +353,8 @@ namespace Logger
         CurrentLevel = level;
     }
 
-    void _InterOut(char *tag, char *content, char *color = NULL)
+    template<class T>
+    void _InterOut(char *tag, T content, char *color = NULL)
     {
         auto now = std::chrono::system_clock::now();
         uint64_t dis_millseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -348,6 +413,14 @@ namespace Logger
         if (CurrentLevel & Error)
         {
             _InterOut(tag, content, RED);
+        }
+    }
+
+    void i(char *tag, jint content)
+    {
+        if (CurrentLevel & Info)
+        {
+            _InterOut(tag, content);
         }
     }
 }

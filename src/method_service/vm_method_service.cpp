@@ -3,13 +3,15 @@
 #include <stdio.h>
 #include <map>
 #include <stack>
+#include <set>
 #include <regex>
 #include <chrono>
 #include <sstream>
 
 #include <shared_func.h>
 
-#include "vm_method_service.hpp"
+#include "../service_header/vm_method_service.hpp"
+#include "../service_header/vm_frame_service.hpp"
 
 namespace VMModel
 {
@@ -25,13 +27,16 @@ namespace VMModel
 
 namespace VMMethodService
 {
-    map<char*, VMMethodHandler> entry_filters;
-    map<char*, VMMethodHandler> exit_filters;
-    stack<VMModel::MethodFrame*> method_stack;
+    map<char *, VMMethodHandler, StringTool::CharStrCompareKey> entry_filters;
+    map<char *, VMMethodHandler, StringTool::CharStrCompareKey> exit_filters;
+    stack<VMModel::MethodFrame *> method_stack;
+    set<char *, StringTool::CharStrCompareKey> white_list;
 
     char *recording_folder;
     int _recordMethodStarted = 0;
     const char *_cost_file = "./cost.txt";
+
+    uint32_t block_count = 0;
 
     void _SetMethodEntryTime(char *method)
     {
@@ -73,30 +78,32 @@ namespace VMMethodService
 
     void _RecordVMMethodEntryHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
     {
-        _SetMethodEntryTime(method->name);
         jvmtiError error;
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
-        
+
         char *file;
         StringTool::Concat(&file, {recording_folder, vm_thread.thread_name, ".txt"});
 
         VMModel::VMClazz *vm_clazz;
-        error = Global::global_vm_env->Allocate(sizeof(VMModel::VMClazz), reinterpret_cast<unsigned char**>(&vm_clazz));
+        error = Global::global_vm_env->Allocate(sizeof(VMModel::VMClazz), reinterpret_cast<unsigned char **>(&vm_clazz));
         VMModel::MapJClazz(method->meta->_clazz, &vm_clazz);
 
+        char *full_name;
+        VMModel::GetMethodFullName(&full_name, method, vm_clazz);
+        _SetMethodEntryTime(full_name);
         char *content;
-        StringTool::Concat(&content, {"enter ", vm_clazz->source_file, "::", method->name, "\n"});
-
+        StringTool::Concat(&content, {"enter ", full_name, "\n"});
+        error = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(full_name));
+        Exception::HandleException(error);
         FileTool::Output(file, content, strlen(content));
-        
+
         VMModel::DellcateClazz(vm_clazz);
         VMModel::DellocateThread(vm_env, &vm_thread);
     }
 
     void _RecordVMMethodExitHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
     {
-        _ResolveMethodEntryTime(method->name);
         jvmtiError error;
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
@@ -105,14 +112,18 @@ namespace VMMethodService
         StringTool::Concat(&file, {recording_folder, vm_thread.thread_name, ".txt"});
 
         VMModel::VMClazz *vm_clazz;
-        error = Global::global_vm_env->Allocate(sizeof(VMModel::VMClazz), reinterpret_cast<unsigned char**>(&vm_clazz));
+        error = Global::global_vm_env->Allocate(sizeof(VMModel::VMClazz), reinterpret_cast<unsigned char **>(&vm_clazz));
         VMModel::MapJClazz(method->meta->_clazz, &vm_clazz);
 
+        char *full_name;
+        VMModel::GetMethodFullName(&full_name, method, vm_clazz);
+        _ResolveMethodEntryTime(full_name);
         char *content;
-        StringTool::Concat(&content, {"exit ", vm_clazz->source_file, "::", method->name, "\n"});
-
+        StringTool::Concat(&content, {"exit ", full_name, "\n"});
+        error = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(full_name));
+        Exception::HandleException(error);
         FileTool::Output(file, content, strlen(content));
-        
+
         VMModel::DellcateClazz(vm_clazz);
         VMModel::DellocateThread(vm_env, &vm_thread);
     }
@@ -144,13 +155,13 @@ namespace VMMethodService
 
     void _ParseOptions(char **options, int size)
     {
-        for (int i = 0;i < size; i++)
+        for (int i = 0; i < size; i++)
         {
             int kv_size = 0;
             char **cmd_kv = split(
                 options[i],
-                _spilt_kv_token, 
-                _max_kv_size, 
+                _spilt_kv_token,
+                _max_kv_size,
                 &kv_size);
             if (kv_size == _max_kv_size)
             {
@@ -162,7 +173,7 @@ namespace VMMethodService
     void JNICALL _HandleMethodEntry(
         jvmtiEnv *vm_env,
         JNIEnv *jni,
-        jthread thread, 
+        jthread thread,
         jmethodID methodID)
     {
         jvmtiError error;
@@ -171,7 +182,16 @@ namespace VMMethodService
         map<char *, VMMethodHandler>::iterator it;
         it = entry_filters.begin();
         while (it != entry_filters.end())
-        {   
+        {
+            if (white_list.find(method->name) != white_list.end())
+            {
+                block_count++;
+                break;
+            }
+            if (block_count != 0)
+            {
+                break;
+            }
             if (regex_search(method->name, regex(it->first)))
             {
                 it->second(vm_env, jni, thread, method);
@@ -183,7 +203,7 @@ namespace VMMethodService
 
     void JNICALL _HandleMethodExit(
         jvmtiEnv *jvmti_env,
-        JNIEnv* jni_env,
+        JNIEnv *jni_env,
         jthread thread,
         jmethodID methodID,
         jboolean was_popped_by_exception,
@@ -195,7 +215,16 @@ namespace VMMethodService
         map<char *, VMMethodHandler>::iterator it;
         it = exit_filters.begin();
         while (it != exit_filters.end())
-        {   
+        {
+            if (white_list.find(method->name) != white_list.end())
+            {
+                block_count--;
+                break;
+            }
+            if (block_count != 0)
+            {
+                break;
+            }
             if (regex_search(method->name, regex(it->first)))
             {
                 it->second(jvmti_env, jni_env, thread, method);
@@ -205,9 +234,43 @@ namespace VMMethodService
         VMModel::DellocateMethod(method);
     }
 
+    void _InitWhiteList()
+    {
+        jvmtiError error;
+        ifstream ifs;
+        string line;
+        ifs.open("../config/method_white_list.txt", ios::in);
+        if (ifs)
+        {
+            while (getline(ifs, line))
+            {
+                const char *c_str = line.c_str();
+                char *data;
+                error = Global::global_vm_env->Allocate(strlen(c_str) + 1, reinterpret_cast<Global::memory_alloc_ptr>(&data));
+                Exception::HandleException(error);
+                strcpy(data, c_str);
+                white_list.insert(data);
+                Logger::i("WhiteList", data);
+            }
+            ifs.close();
+        }
+    }
+
+    void _ReleaseWhiteList()
+    {
+        jvmtiError error;
+        for (set<char *>::iterator it = white_list.begin(); it != white_list.end(); it++)
+        {
+            error = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(*it));
+            Exception::HandleException(error);
+        }
+        white_list.clear();
+    }
+
     void Init(char **options, int option_size)
     {
         _AllocateCapabilities();
+        _InitWhiteList();
         _ParseOptions(options, option_size);
     }
 
@@ -215,7 +278,7 @@ namespace VMMethodService
     {
         VMModel::PrintJMethod(method);
     }
-    
+
     void AddEntryFilter(char *filter, VMMethodHandler handler)
     {
         entry_filters[filter] = handler;
@@ -250,7 +313,37 @@ namespace VMMethodService
             Exception::HandleException(error);
             _recordMethodStarted = 1;
         }
-        
+    }
+
+    void _MethodFrameHandler(VMModel::StackFrame **frame, jint size)
+    {
+        for (int i = 0; i < size; i++)
+        {
+            Logger::i("VMMethodService", frame[i]->vm_method->name);
+        }
+    }
+
+    void _TestMethodFrameHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
+    {
+        VMFrameService::GetCurrentMethodFrame(thread, _MethodFrameHandler);
+    }
+
+    void TestMethodFrame()
+    {
+        Logger::d("MethodService", "TestMethodFrame");
+        AddEntryFilter("firstMethod", _TestMethodFrameHandler);
+        if (!_recordMethodStarted)
+        {
+            jvmtiEventCallbacks callbacks;
+            memset(&callbacks, 0, sizeof(callbacks));
+            callbacks.MethodEntry = &_HandleMethodEntry;
+            jvmtiError error;
+            error = Global::global_vm_env->SetEventCallbacks(&callbacks, static_cast<jint>(sizeof(callbacks)));
+            Exception::HandleException(error);
+            error = Global::global_vm_env->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_ENTRY, 0);
+            Exception::HandleException(error);
+            _recordMethodStarted = 1;
+        }
     }
 
     void Release()
@@ -258,4 +351,3 @@ namespace VMMethodService
         FileTool::Stop();
     }
 }
-
