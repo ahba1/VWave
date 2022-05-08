@@ -15,6 +15,8 @@ namespace Exception
 {
     extern void HandleException(jvmtiError error);
 
+    extern void HandleException(jvmtiError error, const char *msg);
+
     extern void HandleExternalException(int error);
 
     extern void HandleException(jint error);

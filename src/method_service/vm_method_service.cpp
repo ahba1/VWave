@@ -76,8 +76,42 @@ namespace VMMethodService
         }
     }
 
+    void _TestMethodLocalVariable(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
+    {
+        jvmtiError error;
+        jint entry_count;
+        jvmtiLocalVariableEntry *table;
+        error = vm_env->GetLocalVariableTable(method->meta->_id, &entry_count, &table);
+        if (error == JVMTI_ERROR_ABSENT_INFORMATION)
+        {
+            Exception::HandleException(error, "recompile source file with -g");
+        }
+        else 
+        {
+            Exception::HandleException(error);
+        }
+        cout << method->name <<endl;
+        for (int i=0;i<entry_count;i++)
+        {
+            cout << table[i].name << "  ";
+            cout << table[i].slot << endl;
+        }
+        for (int i=0;i<entry_count;i++)
+        {
+            error = vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(table[i].name));
+            Exception::HandleException(error);
+            error = vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(table[i].signature));
+            Exception::HandleException(error);
+            error = vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(table[i].generic_signature));
+            Exception::HandleException(error);
+        }
+        error = vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(table));
+        Exception::HandleException(error);
+    }
+
     void _RecordVMMethodEntryHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
     {
+        //_TestMethodLocalVariable(vm_env, jni, thread, method);
         jvmtiError error;
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
@@ -104,6 +138,7 @@ namespace VMMethodService
 
     void _RecordVMMethodExitHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
     {
+        _TestMethodLocalVariable(vm_env, jni, thread, method);
         jvmtiError error;
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
@@ -136,6 +171,7 @@ namespace VMMethodService
         caps.can_generate_method_entry_events = 1;
         caps.can_generate_method_exit_events = 1;
         caps.can_get_source_file_name = 1;
+        caps.can_access_local_variables = 1;
         jvmtiError e = Global::global_vm_env->AddCapabilities(&caps);
         Exception::HandleException(e);
     }
@@ -295,8 +331,12 @@ namespace VMMethodService
         int error = FileTool::Start();
         if (!error)
         {
-            AddEntryFilter(".*", _RecordVMMethodEntryHandler);
-            AddExitFilter(".*", _RecordVMMethodExitHandler);
+            //AddEntryFilter(".*", _RecordVMMethodEntryHandler);
+            //AddExitFilter(".*", _RecordVMMethodExitHandler);
+            AddEntryFilter("firstMethod", _RecordVMMethodEntryHandler);
+            AddExitFilter("firstMethod", _RecordVMMethodExitHandler);
+            AddEntryFilter("secondMethod", _RecordVMMethodEntryHandler);
+            AddExitFilter("secondMethod", _RecordVMMethodExitHandler);
         }
         if (!_recordMethodStarted)
         {

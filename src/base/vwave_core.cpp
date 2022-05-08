@@ -39,8 +39,25 @@ namespace Exception
             break;
         default:
             PrintStackTrace();
+            char *error_name;
+            Global::global_vm_env->GetErrorName(error, &error_name);
             std::cout << "internal exception happened\n";
-            std::cout << error << "\n";
+            std::cout << error_name << "\n";
+            Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(error_name));
+            throw error;
+        }
+    }
+
+    extern void HandleException(jvmtiError error, const char *msg)
+    {
+        switch (error)
+        {
+        case JVMTI_ERROR_NONE:
+            break;
+        default:
+            PrintStackTrace();
+            std::cout << "internal exception happened\n";
+            std::cout << msg << "\n";
             throw error;
         }
     }
