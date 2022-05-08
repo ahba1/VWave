@@ -144,6 +144,13 @@ namespace StringTool
         }
     }
 
+    void Copy(char **dest, char *source)
+    {
+        jvmtiError error = Global::global_vm_env->Allocate(strlen(source) + 1, reinterpret_cast<Global::memory_alloc_ptr>(dest));
+        Exception::HandleException(error);
+        strcpy(*dest, source);
+    }
+
     int ConvertJString(jstring input, VString **output)
     {
         jvmtiError error;
@@ -161,6 +168,22 @@ namespace StringTool
         {
             _output->src[i] = value[i];
         }
+        env->ReleaseStringUTFChars(input, value);
+        Global::DeallocateJNIEnv(env);
+        return 0;
+    }
+
+    int ConvertJString(jstring input, char **dest)
+    {
+        jvmtiError error;
+        JNIEnv *env;
+        jint ret = Global::AllocateJNIEnv(&env);
+        Exception::HandleExternalException(ret);
+        int len = reinterpret_cast<int>(env->GetStringLength(input));
+        error = Global::global_vm_env->Allocate(len + 1, reinterpret_cast<Global::memory_alloc_ptr>(dest));
+        Exception::HandleException(error);
+        const char *value = env->GetStringUTFChars(input, NULL);
+        strcpy(*dest, value);
         env->ReleaseStringUTFChars(input, value);
         Global::DeallocateJNIEnv(env);
         return 0;

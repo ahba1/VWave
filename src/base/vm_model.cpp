@@ -115,14 +115,10 @@ namespace VMModel
         //sig rule: (params)return
         jmethodID mid = jni->GetMethodID(clazz_obj, "getName", "()Ljava/lang/String;");
         jstring jName = (jstring)jni->CallObjectMethod(klazz, mid);
-        //cout<<jName<<endl;
-        //jni->DeleteLocalRef(clazz_obj);
-        //jni->DeleteLocalRef(jName);
-        // Global::DeallocateJNIEnv(jni);
-        // StringTool::VString *test_out;
-        // StringTool::ConvertJString(jName, &test_out);
-        // Logger::d("MapJClazz", test_out->src);
-        // StringTool::DeallocateVString(test_out);
+        StringTool::ConvertJString(jName, &_clazz->full_name);
+        jni->DeleteLocalRef(clazz_obj);
+        jni->DeleteLocalRef(jName);
+        Global::DeallocateJNIEnv(jni);
     }
 
     void DellcateClazz(VMClazz *clazz)
@@ -134,6 +130,11 @@ namespace VMModel
         Exception::HandleException(error);
         error = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(clazz));
         Exception::HandleException(error);
+    }
+
+    void GetMethodFullName(char **dest, Method *method, VMClazz *clazz)
+    {
+        StringTool::Concat(dest, {clazz->full_name, "::", method->name});
     }
 
     void MapJMethod(jmethodID methodID, Method **method)

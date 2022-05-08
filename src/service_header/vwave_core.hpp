@@ -58,7 +58,11 @@ namespace StringTool
 
     void Concat(char **dest, std::initializer_list<const char*> srcs);
 
+    void Copy(char **dest, char *source);
+
     int ConvertJString(jstring input, VString **output);
+
+    int ConvertJString(jstring input, char **dest);
 
     int DeallocateVString(VString* vstring);
 }

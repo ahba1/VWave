@@ -76,7 +76,7 @@ namespace VMModel {
     {
         ClazzMeta *meta;
         char *source_file;
-        char *package_name;
+        char *full_name;
     };
 
     extern void MapJClazz(jclass klazz, VMClazz **clazz);
@@ -98,6 +98,8 @@ namespace VMModel {
         jint access_flag;
         jboolean is_native;
     };
+
+    void GetMethodFullName(char **dest, Method *method, VMClazz *clazz);
 
     void MapJMethod(jmethodID methodID, Method **method);
 

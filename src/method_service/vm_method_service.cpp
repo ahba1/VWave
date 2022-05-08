@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <map>
 #include <stack>
+#include <set>
 #include <regex>
 #include <chrono>
 #include <sstream>
@@ -26,13 +27,16 @@ namespace VMModel
 
 namespace VMMethodService
 {
-    map<char *, VMMethodHandler> entry_filters;
-    map<char *, VMMethodHandler> exit_filters;
+    map<char *, VMMethodHandler, StringTool::CharStrCompareKey> entry_filters;
+    map<char *, VMMethodHandler, StringTool::CharStrCompareKey> exit_filters;
     stack<VMModel::MethodFrame *> method_stack;
+    set<char *, StringTool::CharStrCompareKey> white_list;
 
     char *recording_folder;
     int _recordMethodStarted = 0;
     const char *_cost_file = "./cost.txt";
+
+    uint32_t block_count = 0;
 
     void _SetMethodEntryTime(char *method)
     {
@@ -74,7 +78,6 @@ namespace VMMethodService
 
     void _RecordVMMethodEntryHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
     {
-        _SetMethodEntryTime(method->name);
         jvmtiError error;
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
@@ -86,9 +89,13 @@ namespace VMMethodService
         error = Global::global_vm_env->Allocate(sizeof(VMModel::VMClazz), reinterpret_cast<unsigned char **>(&vm_clazz));
         VMModel::MapJClazz(method->meta->_clazz, &vm_clazz);
 
+        char *full_name;
+        VMModel::GetMethodFullName(&full_name, method, vm_clazz);
+        _SetMethodEntryTime(full_name);
         char *content;
-        StringTool::Concat(&content, {"enter ", vm_clazz->source_file, "::", method->name, "\n"});
-
+        StringTool::Concat(&content, {"enter ", full_name, "\n"});
+        error = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(full_name));
+        Exception::HandleException(error);
         FileTool::Output(file, content, strlen(content));
 
         VMModel::DellcateClazz(vm_clazz);
@@ -97,7 +104,6 @@ namespace VMMethodService
 
     void _RecordVMMethodExitHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
     {
-        _ResolveMethodEntryTime(method->name);
         jvmtiError error;
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
@@ -109,9 +115,13 @@ namespace VMMethodService
         error = Global::global_vm_env->Allocate(sizeof(VMModel::VMClazz), reinterpret_cast<unsigned char **>(&vm_clazz));
         VMModel::MapJClazz(method->meta->_clazz, &vm_clazz);
 
+        char *full_name;
+        VMModel::GetMethodFullName(&full_name, method, vm_clazz);
+        _ResolveMethodEntryTime(full_name);
         char *content;
-        StringTool::Concat(&content, {"exit ", vm_clazz->source_file, "::", method->name, "\n"});
-
+        StringTool::Concat(&content, {"exit ", full_name, "\n"});
+        error = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(full_name));
+        Exception::HandleException(error);
         FileTool::Output(file, content, strlen(content));
 
         VMModel::DellcateClazz(vm_clazz);
@@ -171,17 +181,22 @@ namespace VMMethodService
         VMModel::MapJMethod(methodID, &method);
         map<char *, VMMethodHandler>::iterator it;
         it = entry_filters.begin();
-        if (strcmp(method->name, "getName"))
+        while (it != entry_filters.end())
         {
-            while (it != entry_filters.end())
+            if (white_list.find(method->name) != white_list.end())
             {
-
-                if (regex_search(method->name, regex(it->first)))
-                {
-                    it->second(vm_env, jni, thread, method);
-                }
-                it++;
+                block_count++;
+                break;
             }
+            if (block_count != 0)
+            {
+                break;
+            }
+            if (regex_search(method->name, regex(it->first)))
+            {
+                it->second(vm_env, jni, thread, method);
+            }
+            it++;
         }
         VMModel::DellocateMethod(method);
     }
@@ -199,23 +214,63 @@ namespace VMMethodService
         VMModel::MapJMethod(methodID, &method);
         map<char *, VMMethodHandler>::iterator it;
         it = exit_filters.begin();
-        if (strcmp(method->name, "getName"))
+        while (it != exit_filters.end())
         {
-            while (it != exit_filters.end())
+            if (white_list.find(method->name) != white_list.end())
             {
-                if (regex_search(method->name, regex(it->first)))
-                {
-                    it->second(jvmti_env, jni_env, thread, method);
-                }
-                it++;
+                block_count--;
+                break;
             }
+            if (block_count != 0)
+            {
+                break;
+            }
+            if (regex_search(method->name, regex(it->first)))
+            {
+                it->second(jvmti_env, jni_env, thread, method);
+            }
+            it++;
         }
         VMModel::DellocateMethod(method);
+    }
+
+    void _InitWhiteList()
+    {
+        jvmtiError error;
+        ifstream ifs;
+        string line;
+        ifs.open("../config/method_white_list.txt", ios::in);
+        if (ifs)
+        {
+            while (getline(ifs, line))
+            {
+                const char *c_str = line.c_str();
+                char *data;
+                error = Global::global_vm_env->Allocate(strlen(c_str) + 1, reinterpret_cast<Global::memory_alloc_ptr>(&data));
+                Exception::HandleException(error);
+                strcpy(data, c_str);
+                white_list.insert(data);
+                Logger::i("WhiteList", data);
+            }
+            ifs.close();
+        }
+    }
+
+    void _ReleaseWhiteList()
+    {
+        jvmtiError error;
+        for (set<char *>::iterator it = white_list.begin(); it != white_list.end(); it++)
+        {
+            error = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(*it));
+            Exception::HandleException(error);
+        }
+        white_list.clear();
     }
 
     void Init(char **options, int option_size)
     {
         _AllocateCapabilities();
+        _InitWhiteList();
         _ParseOptions(options, option_size);
     }
 
