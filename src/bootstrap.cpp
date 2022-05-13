@@ -24,15 +24,24 @@ namespace Bootstrap
 
     SimplestMethod *_DestroyMethods;
     int _DestroyMethodsLen = 0;
+    bool _isTest = false;
 
     void PreToolInit()
     {
-        Logger::Init(Logger::Verbose | Logger::Debug | Logger::Info);
-        Logger::i("Logger", "Init Success");
+        if (_isTest)
+        {
+            Logger::Init(Logger::Test);
+        }
+        else 
+        {
+            Logger::Init(Logger::Verbose | Logger::Debug | Logger::Info | Logger::Error);
+            Logger::i("Logger", "Init Success");
+        }
     }
 
     void Init(JavaVM *vm, char *options, void *reserved)
     {
+        _isTest = !strcmp(options, "test");
         PreToolInit();
         global_java_vm = vm;
         vm->GetEnv(reinterpret_cast<void **>(&global_vm_env), JVMTI_VERSION_1_0);
@@ -46,11 +55,15 @@ namespace Bootstrap
         // {
         //     _DestroyMethods[i]();
         // }
+        if (!_isTest)
+        {
+            VMMethodService::Release();
+        }
     }
 
     void PreParseOptions(char *options, bool isTest)
     {
-        //std::cout << options << std::endl;
+        _isTest = isTest;
         if (isTest)
         {
             Test(Global::global_java_vm, options, NULL);
@@ -98,10 +111,10 @@ namespace Bootstrap
     {
         //ThreadTool::Test();
 
-        VMMethodService::Init(NULL, 0);
-        VMFrameService::Init(NULL, 0);
-        VMMethodService::TestMethodFrame();
-
+        //VMMethodService::Init(NULL, 0);
+        //VMFrameService::Init(NULL, 0);
+        //VMMethodService::TestMethodFrame();
+        VMModel::TestConvertToMethodTask();
         // CollectionTool::TestForeach();
     }
 }

@@ -130,5 +130,35 @@ namespace VMModel {
     void MapStackFrame(jvmtiFrameInfo *info, StackFrame **sf);
 
     void DellocateStackFrame(StackFrame *sf);
+
+    struct MethodInvokeTask
+    {
+        char *filter;
+        char *name;
+        void *params;
+        int params_len;
+        char *result_type;
+        char **param_type;
+    };
+    struct ParamReadTask
+    {
+        char *filter;
+        char **names;
+        int names_len;
+    };
+    struct MethodTask
+    {
+        char **method_filter;
+        int filter_len;
+        MethodInvokeTask *method_invoke_tasks;
+        ParamReadTask *param_read_tasks;
+    };
+    MethodTask *ConvertToMethodTask(char *file);
+
+    void DeallocateMethodTask(MethodTask *task);
+
+    void PrintMethodTask(MethodTask *task);
+
+    void TestConvertToMethodTask();
 }
 #endif

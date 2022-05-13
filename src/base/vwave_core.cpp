@@ -161,7 +161,7 @@ namespace StringTool
         }
     }
 
-    void Copy(char **dest, char *source)
+    void Copy(char **dest, const char *source)
     {
         jvmtiError error = Global::global_vm_env->Allocate(strlen(source) + 1, reinterpret_cast<Global::memory_alloc_ptr>(dest));
         Exception::HandleException(error);
@@ -210,6 +210,13 @@ namespace StringTool
     {
         jvmtiError error;
         error = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(vstring->src));
+        Exception::HandleException(error);
+        return 0;
+    }
+
+    int DellocateChString(char *str)
+    {
+        jvmtiError error = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(str));
         Exception::HandleException(error);
         return 0;
     }
@@ -361,8 +368,10 @@ namespace Logger
     uint8_t Info = 1 << 2;
     uint8_t Warn = 1 << 3;
     uint8_t Error = 1 << 4;
+    uint8_t Test = 1 << 5;
     uint8_t UNKNOWN = 0;
     uint8_t CurrentLevel = UNKNOWN;
+    map<const char*, const char*, StringTool::CharStrCompareKey> test_map;
 
     void Init(uint8_t level)
     {
@@ -393,7 +402,7 @@ namespace Logger
         std::cout << strTime << " : " << tag << "  " << content << std::endl;
     }
 
-    void v(char *tag, char *content)
+    void v(char *tag, const char *content)
     {
         if (CurrentLevel & Verbose)
         {
@@ -401,7 +410,7 @@ namespace Logger
         }
     }
 
-    void d(char *tag, char *content)
+    void d(char *tag, const char *content)
     {
         if (CurrentLevel & Debug)
         {
@@ -409,7 +418,7 @@ namespace Logger
         }
     }
 
-    void i(char *tag, char *content)
+    void i(char *tag, const char *content)
     {
         if (CurrentLevel & Info)
         {
@@ -417,7 +426,7 @@ namespace Logger
         }
     }
 
-    void w(char *tag, char *content)
+    void w(char *tag, const char *content)
     {
         if (CurrentLevel & Warn)
         {
@@ -425,7 +434,7 @@ namespace Logger
         }
     }
 
-    void e(char *tag, char *content)
+    void e(char *tag, const char *content)
     {
         if (CurrentLevel & Error)
         {
@@ -438,6 +447,30 @@ namespace Logger
         if (CurrentLevel & Info)
         {
             _InterOut(tag, content);
+        }
+    }
+
+    void t(char *tag, const char *content)
+    {
+        if (CurrentLevel & Test)
+        {
+            test_map[tag] = content;
+        }
+    }
+
+    void Assert(char *tag, const char *content)
+    {
+        if (test_map.count(tag) == 0)
+        {
+            _InterOut(tag, "failed");
+        }
+        else if (strcmp(content, test_map[tag])) 
+        {
+            _InterOut(tag, "failed");
+        }
+        else 
+        {
+            _InterOut(tag, "pass");
         }
     }
 }

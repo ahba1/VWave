@@ -38,6 +38,8 @@ namespace VMMethodService
 
     uint32_t block_count = 0;
 
+    VMModel::MethodTask *task = NULL;
+
     void _SetMethodEntryTime(char *method)
     {
         VMModel::MethodFrame *mf;
@@ -176,33 +178,30 @@ namespace VMMethodService
         Exception::HandleException(e);
     }
 
-    void _DispathCMD(char *key, char *value)
-    {
-        Logger::d("MethodService", key);
-        Logger::d("MethodService", value);
-        if (!strcmp(key, "record"))
-        {
-            if (value)
-            {
-                RecordMethod(value);
-            }
-        }
-    }
-
     void _ParseOptions(char **options, int size)
     {
-        for (int i = 0; i < size; i++)
+        int kv_size = 0;
+        char **cmd_kv = split(options[0], _spilt_kv_token, _max_kv_size, &kv_size);
+        if (!strcmp(cmd_kv[0], "task"))
         {
-            int kv_size = 0;
-            char **cmd_kv = split(
-                options[i],
-                _spilt_kv_token,
-                _max_kv_size,
-                &kv_size);
-            if (kv_size == _max_kv_size)
+            task = VMModel::ConvertToMethodTask(cmd_kv[1]);
+            if (task == NULL)
             {
-                _DispathCMD(cmd_kv[0], cmd_kv[1]);
+                Logger::e("MethodService", "Parse failed");
+                return;
             }
+            VMModel::PrintMethodTask(task);
+            for (int i=0;i<task->filter_len;i++)
+            {
+                Logger::d("AddFilter", task->method_filter[i]);
+                AddEntryFilter(task->method_filter[i], _RecordVMMethodEntryHandler);
+                AddExitFilter(task->method_filter[i], _RecordVMMethodExitHandler);
+            }
+            RecordMethod("./");
+        }
+        else 
+        {
+            Logger::e("MethodService", "unsupprot options key");
         }
     }
 
@@ -329,15 +328,6 @@ namespace VMMethodService
     {
         recording_folder = file;
         int error = FileTool::Start();
-        if (!error)
-        {
-            //AddEntryFilter(".*", _RecordVMMethodEntryHandler);
-            //AddExitFilter(".*", _RecordVMMethodExitHandler);
-            AddEntryFilter("firstMethod", _RecordVMMethodEntryHandler);
-            AddExitFilter("firstMethod", _RecordVMMethodExitHandler);
-            AddEntryFilter("secondMethod", _RecordVMMethodEntryHandler);
-            AddExitFilter("secondMethod", _RecordVMMethodExitHandler);
-        }
         if (!_recordMethodStarted)
         {
             jvmtiEventCallbacks callbacks;
@@ -389,5 +379,6 @@ namespace VMMethodService
     void Release()
     {
         FileTool::Stop();
+        VMModel::DeallocateMethodTask(task);
     }
 }

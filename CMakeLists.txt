@@ -1,6 +1,7 @@
 cmake_minimum_required (VERSION 2.6)
 project (VWave)
 find_package(JNI REQUIRED)
+find_package(jsoncpp CONFIG REQUIRED)
 include_directories(${JAVA_INCLUDE_PATH})
 include_directories(${JAVA_INCLUDE_PATH2})
 include_directories("/usr/include/fastcommon")
@@ -13,4 +14,5 @@ aux_source_directory(./src/frame_service DIR_FRAME)
 aux_source_directory(./src/class_service DIR_CLASS)
 add_library(${PROJECT_NAME} SHARED  ${DIR_HEADER} ${DIR_SRC} ${DIR_BASE} ${DIR_METHOD} ${DIR_THREAD} ${DIR_FRAME} ${DIR_CLASS})
 target_link_libraries(${PROJECT_NAME} fastcommon)
+target_link_libraries(${PROJECT_NAME} PRIVATE jsoncpp_object jsoncpp_static JsonCpp::JsonCpp)
 

@@ -8,6 +8,8 @@
 #include <string.h>
 #include <stdarg.h>
 #include <initializer_list>
+#include <json/json.h>
+#include "vm_model.hpp"
 #define foreach(src, size) for(int i = 0; i < size; i++)
 
 
@@ -50,7 +52,7 @@ namespace StringTool
 
     struct CharStrCompareKey
     {
-        bool operator()(char *first, char *second) const
+        bool operator()(const char *first, const char *second) const
         {
             return strcmp(first, second);
         }
@@ -60,13 +62,15 @@ namespace StringTool
 
     void Concat(char **dest, std::initializer_list<const char*> srcs);
 
-    void Copy(char **dest, char *source);
+    void Copy(char **dest, const char *source);
 
     int ConvertJString(jstring input, VString **output);
 
     int ConvertJString(jstring input, char **dest);
 
     int DeallocateVString(VString* vstring);
+
+    int DellocateChString(char *str);
 }
 
 namespace ThreadTool
@@ -95,20 +99,25 @@ namespace Logger
     extern uint8_t Info;
     extern uint8_t Warn;
     extern uint8_t Error;
+    extern uint8_t Test;
     extern uint8_t UNKNOWN;
 
     extern void Init(uint8_t level = Verbose);
 
-    extern void v(char *tag, char *content);
+    extern void v(char *tag, const char *content);
 
-    extern void d(char *tag, char *content);
+    extern void d(char *tag, const char *content);
 
-    extern void i(char *tag, char *content);
+    extern void i(char *tag, const char *content);
 
-    extern void w(char *tag, char *content);
+    extern void w(char *tag, const char *content);
 
-    extern void e(char *tag, char *content);
+    extern void e(char *tag, const char *content);
 
     extern void i(char *tag, jint content);
+
+    extern void t(char *tag, const char *content);
+
+    extern void Assert(char *tag, const char *content);
 }
 #endif
