@@ -30,7 +30,8 @@ namespace Bootstrap
     {
         if (_isTest)
         {
-            Logger::Init(Logger::Test);
+            Logger::Init(Logger::Verbose | Logger::Debug | Logger::Info | Logger::Error | Logger::Test);
+            Logger::i("Logger", "Init Success");
         }
         else 
         {

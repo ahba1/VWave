@@ -144,6 +144,7 @@ namespace VMModel {
     {
         char *filter;
         char **names;
+        char **types;
         int names_len;
     };
     struct MethodTask
@@ -151,7 +152,9 @@ namespace VMModel {
         char **method_filter;
         int filter_len;
         MethodInvokeTask *method_invoke_tasks;
+        int method_invoke_tasks_len;
         ParamReadTask *param_read_tasks;
+        int param_read_tasks_len;
     };
     MethodTask *ConvertToMethodTask(char *file);
 

@@ -7,11 +7,14 @@
 #include <regex>
 #include <chrono>
 #include <sstream>
+#include <vector>
 
 #include <shared_func.h>
 
 #include "../service_header/vm_method_service.hpp"
 #include "../service_header/vm_frame_service.hpp"
+#include "vm_param_watch.hpp"
+#include "vm_method_invoke.hpp"
 
 namespace VMModel
 {
@@ -27,8 +30,8 @@ namespace VMModel
 
 namespace VMMethodService
 {
-    map<char *, VMMethodHandler, StringTool::CharStrCompareKey> entry_filters;
-    map<char *, VMMethodHandler, StringTool::CharStrCompareKey> exit_filters;
+    map<string, vector<VMMethodHandler>> entry_filters;
+    map<string, vector<VMMethodHandler>> exit_filters;
     stack<VMModel::MethodFrame *> method_stack;
     set<char *, StringTool::CharStrCompareKey> white_list;
 
@@ -73,47 +76,14 @@ namespace VMMethodService
                 Exception::HandleException(e);
                 strcpy(path, _cost_file);
                 FileTool::Output(path, content, len);
+                Logger::i("MethodCost", content);
             }
             VMModel::DellocateMethodFrame(mf);
         }
     }
 
-    void _TestMethodLocalVariable(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
-    {
-        jvmtiError error;
-        jint entry_count;
-        jvmtiLocalVariableEntry *table;
-        error = vm_env->GetLocalVariableTable(method->meta->_id, &entry_count, &table);
-        if (error == JVMTI_ERROR_ABSENT_INFORMATION)
-        {
-            Exception::HandleException(error, "recompile source file with -g");
-        }
-        else 
-        {
-            Exception::HandleException(error);
-        }
-        cout << method->name <<endl;
-        for (int i=0;i<entry_count;i++)
-        {
-            cout << table[i].name << "  ";
-            cout << table[i].slot << endl;
-        }
-        for (int i=0;i<entry_count;i++)
-        {
-            error = vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(table[i].name));
-            Exception::HandleException(error);
-            error = vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(table[i].signature));
-            Exception::HandleException(error);
-            error = vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(table[i].generic_signature));
-            Exception::HandleException(error);
-        }
-        error = vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(table));
-        Exception::HandleException(error);
-    }
-
     void _RecordVMMethodEntryHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
     {
-        //_TestMethodLocalVariable(vm_env, jni, thread, method);
         jvmtiError error;
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
@@ -140,7 +110,6 @@ namespace VMMethodService
 
     void _RecordVMMethodExitHandler(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method)
     {
-        _TestMethodLocalVariable(vm_env, jni, thread, method);
         jvmtiError error;
         VMModel::VMThread vm_thread;
         VMModel::MapVMThread(vm_env, thread, &vm_thread);
@@ -197,6 +166,22 @@ namespace VMMethodService
                 AddEntryFilter(task->method_filter[i], _RecordVMMethodEntryHandler);
                 AddExitFilter(task->method_filter[i], _RecordVMMethodExitHandler);
             }
+            for (int i=0;i<task->param_read_tasks_len;i++)
+            {
+                for (int j=0;j<task->param_read_tasks[i].names_len;j++)
+                {
+                    ParamWatch::SetWatchField(task->param_read_tasks[i].filter,
+                     task->param_read_tasks[i].names[j],
+                     task->param_read_tasks[i].types[j]);
+                }
+                //AddEntryFilter(task->param_read_tasks[i].filter, ParamWatch::OnWatchField);
+                AddExitFilter(task->param_read_tasks[i].filter, ParamWatch::OnWatchField);
+            }
+            for (int i=0;i<task->method_invoke_tasks_len;i++)
+            {
+                MethodInvoke::SetInvokeMethod(task->method_invoke_tasks);
+                AddExitFilter(task->method_invoke_tasks->filter, MethodInvoke::OnMethodInvoke);
+            }
             RecordMethod("./");
         }
         else 
@@ -206,15 +191,15 @@ namespace VMMethodService
     }
 
     void JNICALL _HandleMethodEntry(
-        jvmtiEnv *vm_env,
-        JNIEnv *jni,
+        jvmtiEnv *jvmti_env,
+        JNIEnv *jni_env,
         jthread thread,
         jmethodID methodID)
     {
         jvmtiError error;
         VMModel::Method *method;
         VMModel::MapJMethod(methodID, &method);
-        map<char *, VMMethodHandler>::iterator it;
+        map<string, vector<VMMethodHandler>>::iterator it;
         it = entry_filters.begin();
         while (it != entry_filters.end())
         {
@@ -229,7 +214,10 @@ namespace VMMethodService
             }
             if (regex_search(method->name, regex(it->first)))
             {
-                it->second(vm_env, jni, thread, method);
+                for (auto &handler : it->second)
+                {
+                    handler(jvmti_env, jni_env, thread, method);
+                }
             }
             it++;
         }
@@ -247,7 +235,7 @@ namespace VMMethodService
         jvmtiError error;
         VMModel::Method *method;
         VMModel::MapJMethod(methodID, &method);
-        map<char *, VMMethodHandler>::iterator it;
+        map<string, vector<VMMethodHandler>>::iterator it;
         it = exit_filters.begin();
         while (it != exit_filters.end())
         {
@@ -262,7 +250,10 @@ namespace VMMethodService
             }
             if (regex_search(method->name, regex(it->first)))
             {
-                it->second(jvmti_env, jni_env, thread, method);
+                for (auto &handler : it->second)
+                {
+                    handler(jvmti_env, jni_env, thread, method);
+                }
             }
             it++;
         }
@@ -316,12 +307,20 @@ namespace VMMethodService
 
     void AddEntryFilter(char *filter, VMMethodHandler handler)
     {
-        entry_filters[filter] = handler;
+        if (entry_filters.count(filter) == 0)
+        {
+            entry_filters[filter] = vector<VMMethodHandler>();
+        }
+        entry_filters[filter].push_back(handler);
     }
 
     void AddExitFilter(char *filter, VMMethodHandler handler)
     {
-        exit_filters[filter] = handler;
+        if (exit_filters.count(filter) == 0)
+        {
+            exit_filters[filter] = vector<VMMethodHandler>();
+        }
+        exit_filters[filter].push_back(handler);
     }
 
     void RecordMethod(char *file)

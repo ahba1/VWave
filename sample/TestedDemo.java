@@ -1,22 +1,32 @@
 
 public class TestedDemo {
-    private int a = 0;
-    private float b = 1f;
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         TestedDemo t = new TestedDemo();
+        long first = System.currentTimeMillis();
         t.firstMethod();
+        long firstEnd = System.currentTimeMillis();
         t.secondMethod();
+        long secondEnd = System.currentTimeMillis();
+        System.out.println("firstMethod Cost: " + (firstEnd - first) + "ms");
+        System.out.println("secondMethod Cost: " + (secondEnd - firstEnd) + "ms");
     }
 
-    public void firstMethod() {
+    public void firstMethod() throws InterruptedException {
         int a = 0;
-        System.out.println("in first method");
+        Thread.sleep(10);
         a = 1;
+        endMethodPrint();
     }
 
-    public void secondMethod() {
+    public void secondMethod() throws InterruptedException {
         float b = 1f;
-        System.out.println("in second method");
-        b = 2f;
+        Thread.sleep(10);
+        b = 1.2f;
+        endMethodPrint();
+    }
+
+    public void endMethodPrint() {
+        System.out.println("end print");
     }
 }
+

@@ -324,9 +324,11 @@ namespace VMModel
 
         Json::Value params = method_invoke_task["params"];
         Json::Value param_types = method_invoke_task["param_types"];
-        jvmtiError error = Global::global_vm_env->Allocate(GetParamsLength(param_types), reinterpret_cast<Global::memory_alloc_ptr>(&task->params));
+        jvmtiError error = Global::global_vm_env->Allocate(GetParamsLength(param_types),
+            reinterpret_cast<Global::memory_alloc_ptr>(&task->params));
         Exception::HandleException(error);
-        error = Global::global_vm_env->Allocate(param_types.size() * sizeof(char*), reinterpret_cast<Global::memory_alloc_ptr>(&task->param_type));
+        error = Global::global_vm_env->Allocate(param_types.size() * sizeof(char*),
+            reinterpret_cast<Global::memory_alloc_ptr>(&task->param_type));
         Exception::HandleException(error);
         char *ptr=(char*)task->params;
         for (int i=0;i<param_types.size();i++)
@@ -341,13 +343,21 @@ namespace VMModel
     {
         StringTool::Copy(&task->filter, param_read_task["filter"].asCString());
         int count = param_read_task["names"].size();
-        jvmtiError error = Global::global_vm_env->Allocate(sizeof(char*) * count, reinterpret_cast<Global::memory_alloc_ptr>(&task->names));
+        jvmtiError error = Global::global_vm_env->Allocate(sizeof(char*) * count,
+            reinterpret_cast<Global::memory_alloc_ptr>(&task->names));
         Exception::HandleException(error);
         for (int i=0;i<count;i++)
         {
-            StringTool::Copy(&task->names[i], param_read_task[i].asCString());
+            StringTool::Copy(&task->names[i], param_read_task["names"][i].asCString());
         }
         task->names_len = count;
+        error = Global::global_vm_env->Allocate(sizeof(char*) * count, 
+            reinterpret_cast<Global::memory_alloc_ptr>(&task->types));
+        Exception::HandleException(error);
+        for (int i=0;i<count;i++)
+        {
+            StringTool::Copy(&task->types[i], param_read_task["types"][i].asCString());
+        }
     }
 
     VMModel::MethodTask *ConvertToMethodTask(char *file)
@@ -385,23 +395,29 @@ namespace VMModel
             Logger::e(file, "param_read_task is not an array");
             return NULL;
         }
+
         jvmtiError error = Global::global_vm_env->Allocate(sizeof(VMModel::MethodTask), reinterpret_cast<Global::memory_alloc_ptr>(&ret));
         Exception::HandleException(error);
         ConvertFilter(ret, filter);
+
         error = Global::global_vm_env->Allocate(sizeof(VMModel::MethodInvokeTask) * method_invoke_task.size(), reinterpret_cast<Global::memory_alloc_ptr>(&ret->method_invoke_tasks));
         Exception::HandleException(error);
         for (int i=0;i<method_invoke_task.size();i++)
         {
             ConvertMethodInvokeTask(&ret->method_invoke_tasks[i], method_invoke_task[i]);
         }
-        error = Global::global_vm_env->Allocate(sizeof(VMModel::ParamReadTask) * method_invoke_task.size(), reinterpret_cast<Global::memory_alloc_ptr>(&ret->param_read_tasks));
+        ret->method_invoke_tasks_len = method_invoke_task.size();
+
+        error = Global::global_vm_env->Allocate(sizeof(VMModel::ParamReadTask) * param_read_task.size(), reinterpret_cast<Global::memory_alloc_ptr>(&ret->param_read_tasks));
         Exception::HandleException(error);
         for (int i=0;i<param_read_task.size();i++)
         {
             ConvertParamReadTask(&ret->param_read_tasks[i], param_read_task[i]);
         }
+        ret->param_read_tasks_len = param_read_task.size();
+
         task_file_ifs.close();
-        Logger::t("TestConvertToMethodTask", "Successfully");
+        Logger::i("TestConvertToMethodTask", "Successfully");
         return ret;
     }   
 
@@ -428,8 +444,11 @@ namespace VMModel
         for (int i=0;i<task->names_len;i++)
         {
             StringTool::DellocateChString(task->names[i]);
+            StringTool::DellocateChString(task->types[i]);
         }
         jvmtiError e = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(task->names));
+        Exception::HandleException(e);
+        e = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(task->types));
         Exception::HandleException(e);
         e = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(task));
         Exception::HandleException(e);
@@ -459,7 +478,13 @@ namespace VMModel
 
     void TestConvertToMethodTask()
     {
-        VMModel::MethodTask *task = ConvertToMethodTask("./target.json");
+        //正常执行路径用例
+        VMModel::MethodTask *task1 = ConvertToMethodTask("./target.json");
         Logger::Assert("TestConvertToMethodTask", "Successfully");
+        DeallocateMethodTask(task1);
+        //异常执行路径用例1
+        VMModel::MethodTask *task2 = ConvertToMethodTask("./target.txt");
+        Logger::Assert("MethodTask", "read json file failed");
+        DeallocateMethodTask(task2);
     }
 }

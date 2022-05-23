@@ -307,7 +307,6 @@ namespace FileTool
     {
         interrupted = 1;
         pthread_join(spin_out_thread, NULL);
-        cout << "exit main thread\n";
         return 0;
     }
 
@@ -382,6 +381,11 @@ namespace Logger
     template<class T>
     void _InterOut(char *tag, T content, char *color = NULL)
     {
+        if (CurrentLevel & Test) 
+        {
+            test_map[tag] = content;
+            return;
+        }
         auto now = std::chrono::system_clock::now();
         uint64_t dis_millseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
             now.time_since_epoch()
@@ -439,22 +443,6 @@ namespace Logger
         if (CurrentLevel & Error)
         {
             _InterOut(tag, content, RED);
-        }
-    }
-
-    void i(char *tag, jint content)
-    {
-        if (CurrentLevel & Info)
-        {
-            _InterOut(tag, content);
-        }
-    }
-
-    void t(char *tag, const char *content)
-    {
-        if (CurrentLevel & Test)
-        {
-            test_map[tag] = content;
         }
     }
 

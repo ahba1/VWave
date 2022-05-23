@@ -116,8 +116,6 @@ namespace Logger
 
     extern void i(char *tag, jint content);
 
-    extern void t(char *tag, const char *content);
-
     extern void Assert(char *tag, const char *content);
 }
 #endif

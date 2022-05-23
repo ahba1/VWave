@@ -17,7 +17,10 @@ namespace VMModel
 
 namespace VMMethodService
 {
-    typedef void (*VMMethodHandler)(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, VMModel::Method *method);
+    typedef void (*VMMethodHandler)(jvmtiEnv *vm_env,
+                                    JNIEnv *jni,
+                                    jthread thread, 
+                                    VMModel::Method *method);
 
     void Init(char **options, int option_size);
 

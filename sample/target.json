@@ -1,19 +1,18 @@
 {
     "method_filter": ["firstMethod", "secondMethod"],
     "method_invoke_tasks": [
-        {
-            "filter": "",
-            "name": "",
-            "params": [],
-            "params_len": 0,
-            "result_type": "",
-            "param_types": []
-        }
+        
     ],
     "param_read_tasks": [
         {
-            "filter": "",
-            "names": []
+            "filter": "firstMethod",
+            "names": ["a"],
+            "types": ["int"]
+        },
+        {
+            "filter": "secondMethod",
+            "names": ["b"],
+            "types": ["float"]
         }
     ]
 }

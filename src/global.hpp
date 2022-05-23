@@ -12,6 +12,8 @@ namespace Global {
     typedef unsigned char** memory_alloc_ptr;
     typedef unsigned char* memory_delloc_ptr;
 
+    typedef jvmtiEnv* (*LinkProxy)();
+
     inline JavaVM *global_java_vm;
     inline jvmtiEnv *global_vm_env;
 
