@@ -7,6 +7,7 @@
 #include "service_header/vm_method_service.hpp"
 #include "service_header/vm_class_service.hpp"
 #include "service_header/vm_frame_service.hpp"
+#include "service_header/vm_thread_service.hpp"
 
 namespace Bootstrap
 {
@@ -25,6 +26,7 @@ namespace Bootstrap
     SimplestMethod *_DestroyMethods;
     int _DestroyMethodsLen = 0;
     bool _isTest = false;
+    VMThreadService *service;
 
     void PreToolInit()
     {
@@ -60,6 +62,7 @@ namespace Bootstrap
         {
             VMMethodService::Release();
         }
+        delete service;
     }
 
     void PreParseOptions(char *options, bool isTest)
@@ -92,6 +95,7 @@ namespace Bootstrap
 
     void LoadService(char *service_name, char **options, int options_size)
     {
+        
         if (!strcmp(service_name, "method"))
         {
             Logger::i("LoadService", service_name);
@@ -100,7 +104,18 @@ namespace Bootstrap
             _DestroyMethodsLen++;
             return;
         }
-        Logger::e("Load", service_name);
+        if (!strcmp(service_name, "thread"))
+        {
+            Logger::i("LoadService", service_name);
+            service = new VMThreadService();
+            service->Init(0x01);
+            int kv_size = 0;
+            char **cmd_kv = split(options[0], _spilt_kv_token, _max_kv_size, &kv_size);
+            service->Invoke(cmd_kv[1]);
+            freeSplit(cmd_kv);
+            return;
+        }
+        // Logger::e("Load", service_name);
     }
 
     int CheckParams(const char *key_params, char *params)

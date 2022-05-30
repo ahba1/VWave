@@ -19,7 +19,6 @@ namespace MethodInvoke
         }
         else 
         {
-            cout << "???" <<endl;
             Exception::HandleException(error);
         }
         for (int i=0;i<entry_count;i++)

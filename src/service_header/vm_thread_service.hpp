@@ -1,44 +1,63 @@
-#include "vm_service.hpp"
-#include "vm_model.hpp"
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
 
 #include "../global.hpp"
+#include "../data/vm_thread.hpp"
 
-using namespace std;
-using namespace Global;
-
-namespace _VMThreadService
+class VMServiceDesc
 {
-    typedef void (*ThreadWatcher)(jvmtiEnv *vm_env, JNIEnv *jni, VMModel::VMThread *vm_thread);
+};
 
-    typedef void* (*VWaveThreadFunc)(void *args);
-
-    void CreateJNIThread(jthread *thread, VWaveThreadFunc func, void *args);
-
-    void OnThreadStateChange(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jthread thread);
-}
-
-class VMThreadService : public VMService
+class VMThreadResolver
 {
+public:
+        VMServiceDesc *Resolve(char *file);
+};
 
+class VMThreadService
+{
 private:
-    int thread_state;
-
-    void DispatchCMD(char *key, char *value = NULL);
-
-    void StartMonitorThread();
-
-    void EndMoitorThread();
+        VMThreadResolver resolver;
+        vector<VMThread *> threads;
+        char *_target;
 
 public:
-    VMThreadService(jvmtiEnv *vm_env);
+        VMThreadService();
 
-    ~VMThreadService();
+        ~VMThreadService();
 
-    void ParseOptions(char **options, int option_size) override;
+        void Init(uint8_t phase);
 
-    char *GetServiceName() override;
+        void Invoke(char *target);
 
-    void GetCurrentThreadInfo();
+        void OnPhaseChaged(uint8_t phase);
 
-    void MonitorThread(char *thread_name, _VMThreadService::ThreadWatcher watcher);
+        void OnThreadStart(jvmtiEnv *jvmti_env,
+                           JNIEnv *jni_env,
+                           jthread thread);
+
+        void OnThreadEnd(jvmtiEnv *jvmti_env,
+                         JNIEnv *jni_env,
+                         jthread thread);
+
+        void OnExplicitChange(jvmtiEnv *jvmti_env,
+                              JNIEnv *jni_env,
+                              jthread invoker,
+                              jthread invokee,
+                              char *method);
+
+        void OnImplicitChangeStart(jvmtiEnv *jvmti_env,
+                                   JNIEnv *jni_env,
+                                   jthread invoker,
+                                   jobject invokee,
+                                   char *method);
+
+        void OnImplicitChangeEnd(jvmtiEnv *jvmti_env,
+                                   JNIEnv *jni_env,
+                                   jthread invoker,
+                                   jobject invokee,
+                                   char *method);
+        VMThreadResolver &GetResolver();
 };
