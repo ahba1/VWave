@@ -64,6 +64,10 @@ namespace StringTool
 
     void Copy(char **dest, const char *source);
 
+    void RegexSearch(const char *target, const char *regex_ch, char **ret);
+
+    bool RegexHas(const char *target, const char *regex_ch);
+
     int ConvertJString(jstring input, VString **output);
 
     int ConvertJString(jstring input, char **dest);

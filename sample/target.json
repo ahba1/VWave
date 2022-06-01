@@ -1,13 +1,20 @@
 {
     "method_filter": ["firstMethod", "secondMethod"],
     "method_invoke_tasks": [
-        
+        {
+            "filter": "firstMethod",
+            "name": "MethodTest::endMethodPrint()V",
+            "params": [],
+            "params_len": 0,
+            "result_type": "",
+            "params_types": ""
+        }
     ],
     "param_read_tasks": [
         {
             "filter": "firstMethod",
             "names": ["a"],
-            "types": ["int"]
+            "types": ["Object"]
         },
         {
             "filter": "secondMethod",

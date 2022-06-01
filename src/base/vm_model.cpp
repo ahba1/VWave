@@ -88,18 +88,18 @@ namespace VMModel
         error = env->Deallocate(reinterpret_cast<unsigned char *>(vm_thread->_info));
     }
 
-    void TestClassLoad(jclass clazz) 
+    void TestClassLoad(jclass clazz)
     {
         char *name;
-        cout<<"?"<<endl;
+        cout << "?" << endl;
         jvmtiError error = Global::global_vm_env->GetSourceFileName(clazz, &name);
-        cout<<"??"<<endl;
+        cout << "??" << endl;
         Exception::HandleException(error);
         Logger::d("TestClassLoad", name);
         error = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(name));
         Exception::HandleException(error);
     }
-    
+
     void MapJClazz(jclass klazz, VMClazz **clazz)
     {
         jvmtiError error;
@@ -115,7 +115,7 @@ namespace VMModel
         int ret = Global::AllocateJNIEnv(&jni);
         Exception::HandleExternalException(ret);
         jclass clazz_obj = jni->GetObjectClass(klazz);
-        //sig rule: (params)return
+        // sig rule: (params)return
         jmethodID mid = jni->GetMethodID(clazz_obj, "getName", "()Ljava/lang/String;");
         jstring jName = (jstring)jni->CallObjectMethod(klazz, mid);
         StringTool::ConvertJString(jName, &_clazz->full_name);
@@ -224,94 +224,194 @@ namespace VMModel
     void ConvertFilter(VMModel::MethodTask *task, Json::Value &filter)
     {
         int count = filter.size();
-        jvmtiError error = Global::global_vm_env->Allocate(sizeof(char*) * count, reinterpret_cast<Global::memory_alloc_ptr>(&task->method_filter));
+        jvmtiError error = Global::global_vm_env->Allocate(sizeof(char *) * count, reinterpret_cast<Global::memory_alloc_ptr>(&task->method_filter));
         Exception::HandleException(error);
-        for (int i=0;i<count;i++)
+        for (int i = 0; i < count; i++)
         {
             StringTool::Copy(&task->method_filter[i], filter[i].asCString());
         }
         task->filter_len = count;
     }
 
-    int GetTypeLength(const char *type)
+    int GetTypeLength(const char *type, void *ptr)
     {
-        if (!strcmp(type, "boolean"))
+        if (StringTool::RegexHas(type, "_basic"))
         {
-            return 1;
+            char *real_type;
+            StringTool::RegexSearch(type, ".*(?=_basic)", &real_type);
+            if (!strcmp(real_type, "boolean"))
+            {
+                return 1;
+            }
+            if (!strcmp(real_type, "char"))
+            {
+                return 2;
+            }
+            if (!strcmp(real_type, "short"))
+            {
+                return 2;
+            }
+            if (!strcmp(real_type, "int"))
+            {
+                return 4;
+            }
+            if (!strcmp(real_type, "long"))
+            {
+                return 8;
+            }
+            if (!strcmp(real_type, "float"))
+            {
+                return 4;
+            }
+            if (!strcmp(real_type, "double"))
+            {
+                return 8;
+            }
+            if (!strcmp(real_type, "void"))
+            {
+                return 0;
+            }
+            if (!strcmp(real_type, "String"))
+            {
+                const char *param_ch = (const char*)ptr;
+                return strlen(param_ch) + 1;
+            }
+            StringTool::DellocateChString(real_type);
         }
-        if (!strcmp(type, "char"))
+        else 
         {
-            return 2;
+            const char *param_ch = (const char*)ptr;
+            return strlen(param_ch) + 1;
         }
-        if (!strcmp(type, "short"))
-        {
-            return 2;
-        }
-        if (!strcmp(type, "int"))
-        {
-            return 4;
-        }
-        if (!strcmp(type, "long"))
-        {
-            return 8;
-        }
-        if (!strcmp(type, "float"))
-        {
-            return 4;
-        }
-        if (!strcmp(type, "double"))
-        {
-            return 8;
-        }
-        if (!strcmp(type, "void"))
-        {
-            return 0;
-        }
-        return sizeof(jobject);
     }
 
-    int GetParamsLength(Json::Value &param_types)
+    int GetTypeLength(Json::Value &param, Json::Value &param_type)
+    {
+        const char *type_ch = param_type.asCString();
+        if (StringTool::RegexHas(type_ch, "_basic"))
+        {
+            char *real_type;
+            StringTool::RegexSearch(type_ch, ".*(?=_basic)", &real_type);
+            if (!strcmp(real_type, "boolean"))
+            {
+                return 1;
+            }
+            if (!strcmp(real_type, "char"))
+            {
+                return 2;
+            }
+            if (!strcmp(real_type, "short"))
+            {
+                return 2;
+            }
+            if (!strcmp(real_type, "int"))
+            {
+                return 4;
+            }
+            if (!strcmp(real_type, "long"))
+            {
+                return 8;
+            }
+            if (!strcmp(real_type, "float"))
+            {
+                return 4;
+            }
+            if (!strcmp(real_type, "double"))
+            {
+                return 8;
+            }
+            if (!strcmp(real_type, "void"))
+            {
+                return 0;
+            }
+            if (!strcmp(real_type, "String"))
+            {
+                const char *param_ch = param.asCString();
+                return strlen(param_ch) + 1;
+            }
+            StringTool::DellocateChString(real_type);
+        }
+        else 
+        {
+            const char *param_ch = param.asCString();
+            return strlen(param_ch) + 1;
+        }
+    }
+
+    int GetParamsLength(Json::Value &params, Json::Value &param_types)
     {
         int count = param_types.size();
         int len = 0;
-        for (int i=0;i<count;i++)
+        for (int i = 0; i < count; i++)
         {
-            len += GetTypeLength(param_types[i].asCString());
+            len += GetTypeLength(params[i], param_types[i]);
         }
         return len;
     }
 
-    void InitParams(const char *type, Json::Value value, char *ptr)
+    int GetParamTypesLength(Json::Value &param_types)
     {
-        if (!strcmp(type, "boolean"))
+        int count = param_types.size();
+        int len = 0;
+        for (int i = 0; i < count; i++)
         {
-            *((bool*)ptr) = value.asBool();
-            return;
+            len += (strlen(param_types[i].asCString()) + 1);
         }
-        if (!strcmp(type, "char"))
+        return len;
+    }
+
+    void InitParams(Json::Value &param, Json::Value &param_type, char *ptr)
+    {
+        const char *type_ch = param_type.asCString();
+        if (StringTool::RegexHas(type_ch, "_basic"))
         {
-            *ptr = *value.asCString();
-            return;
+            char *real_type;
+            StringTool::RegexSearch(type_ch, ".*(?=_basic)", &real_type);
+            if (!strcmp(real_type, "boolean"))
+            {
+                *ptr = param.asBool();
+            }
+            if (!strcmp(real_type, "char"))
+            {
+                int16_t *_ptr = (int16_t*)ptr;
+                *_ptr = param.asCString()[0];
+            }
+            if (!strcmp(real_type, "short"))
+            {
+                int16_t *_ptr = (int16_t*)ptr;
+                *_ptr = param.asInt();
+            }
+            if (!strcmp(real_type, "int"))
+            {
+                int32_t *_ptr = (int32_t*)ptr;
+                *_ptr = param.asInt();
+            }
+            if (!strcmp(real_type, "long"))
+            {
+                int64_t *_ptr = (int64_t*)ptr;
+                *_ptr = param.asInt64();
+            }
+            if (!strcmp(real_type, "float"))
+            {
+                float *_ptr = (float*)ptr;
+                *_ptr = param.asFloat();
+            }
+            if (!strcmp(real_type, "double"))
+            {
+                double *_ptr = (double*)ptr;
+                *_ptr = param.asDouble();
+            }
+            if (!strcmp(real_type, "String"))
+            {
+                const char *param_ch = param.asCString();
+                strcpy(ptr, param_ch);
+            }
+            StringTool::DellocateChString(real_type);
         }
-        if (!strcmp(type, "short"))
+        else 
         {
-            *((int16_t*)ptr) = value.asInt();
-        }
-        if (!strcmp(type, "int"))
-        {
-            *((int32_t*)ptr) = value.asInt();
-        }
-        if (!strcmp(type, "long"))
-        {
-            *((int64_t*)ptr) = value.asInt64();
-        }
-        if (!strcmp(type, "float"))
-        {
-            *((_Float32*)ptr) = value.asFloat();
-        }
-        if (!strcmp(type, "double"))
-        {
-            *((_Float64*)ptr) = value.asDouble();
+            const char *param_ch = param.asCString();
+            strcpy(ptr, param_ch);
         }
     }
 
@@ -322,20 +422,28 @@ namespace VMModel
         StringTool::Copy(&task->result_type, method_invoke_task["result_type"].asCString());
         task->params_len = method_invoke_task["params_len"].asInt();
 
+        //默认都是参数名传递，基础类型值传递使用类型为type_basic
         Json::Value params = method_invoke_task["params"];
         Json::Value param_types = method_invoke_task["param_types"];
-        jvmtiError error = Global::global_vm_env->Allocate(GetParamsLength(param_types),
-            reinterpret_cast<Global::memory_alloc_ptr>(&task->params));
+
+        //计算参数总长度
+        jvmtiError error = Global::global_vm_env->Allocate(GetParamsLength(params, param_types),
+                                                           reinterpret_cast<Global::memory_alloc_ptr>(&task->params));
         Exception::HandleException(error);
-        error = Global::global_vm_env->Allocate(param_types.size() * sizeof(char*),
-            reinterpret_cast<Global::memory_alloc_ptr>(&task->param_type));
+        //计算参数类型总长度
+        error = Global::global_vm_env->Allocate(sizeof(char *) * param_types.size(),
+                                                reinterpret_cast<Global::memory_alloc_ptr>(&task->param_type));
         Exception::HandleException(error);
-        char *ptr=(char*)task->params;
-        for (int i=0;i<param_types.size();i++)
+
+        char *ptr = (char *)task->params;
+        for (int i = 0; i < param_types.size(); i++)
         {
-            InitParams(param_types[i].asCString(), params[i], ptr);
-            ptr += GetTypeLength(param_types[i].asCString());
-            StringTool::Copy(&task->param_type[i], param_types[i].asCString());
+            //参数复制
+            InitParams(params[i], param_types[i], ptr);
+            //参数类型复制
+            StringTool::Copy(&task->param_type[i], param_types.asCString());
+            //ptr移动
+            ptr += GetTypeLength(params[i], param_types[i]);
         }
     }
 
@@ -343,18 +451,18 @@ namespace VMModel
     {
         StringTool::Copy(&task->filter, param_read_task["filter"].asCString());
         int count = param_read_task["names"].size();
-        jvmtiError error = Global::global_vm_env->Allocate(sizeof(char*) * count,
-            reinterpret_cast<Global::memory_alloc_ptr>(&task->names));
+        jvmtiError error = Global::global_vm_env->Allocate(sizeof(char *) * count,
+                                                           reinterpret_cast<Global::memory_alloc_ptr>(&task->names));
         Exception::HandleException(error);
-        for (int i=0;i<count;i++)
+        for (int i = 0; i < count; i++)
         {
             StringTool::Copy(&task->names[i], param_read_task["names"][i].asCString());
         }
         task->names_len = count;
-        error = Global::global_vm_env->Allocate(sizeof(char*) * count, 
-            reinterpret_cast<Global::memory_alloc_ptr>(&task->types));
+        error = Global::global_vm_env->Allocate(sizeof(char *) * count,
+                                                reinterpret_cast<Global::memory_alloc_ptr>(&task->types));
         Exception::HandleException(error);
-        for (int i=0;i<count;i++)
+        for (int i = 0; i < count; i++)
         {
             StringTool::Copy(&task->types[i], param_read_task["types"][i].asCString());
         }
@@ -402,7 +510,7 @@ namespace VMModel
 
         error = Global::global_vm_env->Allocate(sizeof(VMModel::MethodInvokeTask) * method_invoke_task.size(), reinterpret_cast<Global::memory_alloc_ptr>(&ret->method_invoke_tasks));
         Exception::HandleException(error);
-        for (int i=0;i<method_invoke_task.size();i++)
+        for (int i = 0; i < method_invoke_task.size(); i++)
         {
             ConvertMethodInvokeTask(&ret->method_invoke_tasks[i], method_invoke_task[i]);
         }
@@ -410,7 +518,7 @@ namespace VMModel
 
         error = Global::global_vm_env->Allocate(sizeof(VMModel::ParamReadTask) * param_read_task.size(), reinterpret_cast<Global::memory_alloc_ptr>(&ret->param_read_tasks));
         Exception::HandleException(error);
-        for (int i=0;i<param_read_task.size();i++)
+        for (int i = 0; i < param_read_task.size(); i++)
         {
             ConvertParamReadTask(&ret->param_read_tasks[i], param_read_task[i]);
         }
@@ -419,7 +527,7 @@ namespace VMModel
         task_file_ifs.close();
         Logger::i("TestConvertToMethodTask", "Successfully");
         return ret;
-    }   
+    }
 
     void DeallocateMethodInvokeTask(VMModel::MethodInvokeTask *task)
     {
@@ -428,7 +536,7 @@ namespace VMModel
         StringTool::DellocateChString(task->result_type);
         jvmtiError e = Global::global_vm_env->Deallocate(reinterpret_cast<Global::memory_delloc_ptr>(task->params));
         Exception::HandleException(e);
-        for (int i=0;i<task->params_len;i++)
+        for (int i = 0; i < task->params_len; i++)
         {
             StringTool::DellocateChString(task->param_type[i]);
         }
@@ -441,7 +549,7 @@ namespace VMModel
     void DeallocateParamReadTask(VMModel::ParamReadTask *task)
     {
         StringTool::DellocateChString(task->filter);
-        for (int i=0;i<task->names_len;i++)
+        for (int i = 0; i < task->names_len; i++)
         {
             StringTool::DellocateChString(task->names[i]);
             StringTool::DellocateChString(task->types[i]);
@@ -460,7 +568,7 @@ namespace VMModel
         {
             return;
         }
-        for (int i=0;i<task->filter_len;i++)
+        for (int i = 0; i < task->filter_len; i++)
         {
             StringTool::DellocateChString(task->method_filter[i]);
         }
@@ -470,9 +578,27 @@ namespace VMModel
 
     void PrintMethodTask(VMModel::MethodTask *task)
     {
-        for (int i=0;i<task->filter_len;i++)
+        // print method filter
+        for (int i = 0; i < task->filter_len; i++)
         {
             Logger::d("MethodTask::filter", task->method_filter[i]);
+        }
+
+        // print method invoke task
+        for (int i = 0; i < task->method_invoke_tasks_len; i++)
+        {
+            Logger::d("MethodInvokeTask::filter", task->method_invoke_tasks[i].filter);
+            Logger::d("MethodInvokeTask::name", task->method_invoke_tasks[i].name);
+        }
+
+        // print param watch task
+        for (int i = 0; i < task->param_read_tasks_len; i++)
+        {
+            Logger::d("ParamReadTask::filter", task->param_read_tasks[i].filter);
+            for (int j = 0; j < task->param_read_tasks[i].names_len; j++)
+            {
+                Logger::d("ParamReadTask::name", task->param_read_tasks[i].names[j]);
+            }
         }
     }
 

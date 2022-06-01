@@ -76,7 +76,7 @@ namespace VMMethodService
                 Exception::HandleException(e);
                 strcpy(path, _cost_file);
                 FileTool::Output(path, content, len);
-                Logger::i("MethodCost", content);
+                //Logger::i("MethodCost", content);
             }
             VMModel::DellocateMethodFrame(mf);
         }
@@ -179,7 +179,7 @@ namespace VMMethodService
             }
             for (int i=0;i<task->method_invoke_tasks_len;i++)
             {
-                MethodInvoke::SetInvokeMethod(task->method_invoke_tasks);
+                MethodInvoke::SetInvokeMethod(task->method_invoke_tasks[i].filter, &task->method_invoke_tasks[i]);
                 AddExitFilter(task->method_invoke_tasks->filter, MethodInvoke::OnMethodInvoke);
             }
             RecordMethod("./");

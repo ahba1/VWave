@@ -163,5 +163,9 @@ namespace VMModel {
     void PrintMethodTask(MethodTask *task);
 
     void TestConvertToMethodTask();
+
+    int GetTypeLength(Json::Value &param, Json::Value &param_type);
+
+    int GetTypeLength(const char *type, void *ptr);
 }
 #endif

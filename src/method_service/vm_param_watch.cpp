@@ -50,46 +50,70 @@ namespace ParamWatch
         Logger::i("FieldWatch", buffer.str().c_str());
     }
 
-    void GetObject(jvmtiEnv *vm_env, jthread thread, const char *name, jint slot)
+    void GetObject(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, const char *name, jint slot)
     {
         jobject value;
+        char *ch_str;
         jvmtiError error = vm_env->GetLocalObject(thread, 0, slot, &value);
         Exception::HandleException(error);
+        jclass clazz_obj = jni->GetObjectClass(value);
+        jmethodID mid = jni->GetMethodID(clazz_obj, "toString", "()Ljava/lang/String;");
+        jstring jName = (jstring)jni->CallObjectMethod(value, mid);
+        StringTool::ConvertJString(jName, &ch_str);
+        std::ostringstream buffer;
+        buffer << "Param " << name << " is " << ch_str;
+        Logger::i("FieldWatch", buffer.str().c_str());
+        jni->DeleteLocalRef(clazz_obj);
+        jni->DeleteLocalRef(jName);
+        StringTool::DellocateChString(ch_str);
     }
 
-    void GetValue(jvmtiEnv *vm_env, jthread thread, const char *name, jint slot, const char *type)
+    void GetValue(jvmtiEnv *vm_env, JNIEnv *jni, jthread thread, const char *name, jint slot, const char *type)
     {
         if (!strcmp(type, "boolean"))
         {
             GetIntValue(vm_env, thread, name, slot);
+            return;
         }
         if (!strcmp(type, "byte"))
         {
             GetIntValue(vm_env, thread, name, slot);
+            return;
         }
         if (!strcmp(type, "char"))
         {
             GetIntValue(vm_env, thread, name, slot);
+            return;
         }
         if (!strcmp(type, "short"))
         {
             GetIntValue(vm_env, thread, name, slot);
+            return;
         }
         if (!strcmp(type, "int"))
         {
             GetIntValue(vm_env, thread, name, slot);
+            return;
         }
         if (!strcmp(type, "long"))
         {
             GetLongValue(vm_env, thread, name, slot);
+            return;
         }
         if (!strcmp(type, "float"))
         {
             GetFloatValue(vm_env, thread, name, slot);
+            return;
         }
         if (!strcmp(type, "double"))
         {
             GetDoubleValue(vm_env, thread, name, slot);
+            return;
+        }
+        if (!strcmp(type, "Object"))
+        {
+            GetObject(vm_env, jni, thread, name, slot);
+            return;
         }
     }
 
@@ -127,7 +151,7 @@ namespace ParamWatch
 
                 if (find(fields.begin(), fields.end(), table[i].name) != fields.end())
                 {
-                    GetValue(vm_env, thread, table[i].name, table[i].slot, watch_fields_types[method->name][table[i].name].c_str());
+                    GetValue(vm_env, jni, thread, table[i].name, table[i].slot, watch_fields_types[method->name][table[i].name].c_str());
                 }
             }
             

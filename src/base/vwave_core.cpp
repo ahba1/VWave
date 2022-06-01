@@ -6,6 +6,7 @@
 #include <sys/syscall.h>
 #include <chrono>
 #include <execinfo.h>
+#include <regex>
 
 #include "../service_header/vwave_core.hpp"
 #include "../global.hpp"
@@ -166,6 +167,22 @@ namespace StringTool
         jvmtiError error = Global::global_vm_env->Allocate(strlen(source) + 1, reinterpret_cast<Global::memory_alloc_ptr>(dest));
         Exception::HandleException(error);
         strcpy(*dest, source);
+    }
+
+    void RegexSearch(const char *target, const char *regex_ch, char **ret)
+    {
+        string str_target(target);
+        regex regs(regex_ch);
+        smatch reg_search_res;
+        regex_search(str_target, reg_search_res, regs);
+        StringTool::Copy(ret, reg_search_res.str().c_str());
+    }
+
+    bool RegexHas(const char *target, const char *regex_ch)
+    {
+        string str_target(target);
+        regex regs(regex_ch);
+        return regex_search(str_target, regs);
     }
 
     int ConvertJString(jstring input, VString **output)
